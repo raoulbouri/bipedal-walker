@@ -1,0 +1,19 @@
+[project]
+name = "biped"
+version = "0.1.0"
+description = "Biped robot simulation and control using MuJoCo"
+requires-python = ">=3.9"
+dependencies = [
+    "mujoco>=3.0.0",
+    "numpy>=1.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "black>=23.0",
+    "ruff>=0.1.0",
+]
+
+[tool.uv]
+managed = true

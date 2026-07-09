@@ -1,0 +1,778 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="assembly_simple">
+    <mujoco><compiler meshdir="/Users/rahulbouri/Developer/biped/meshes/stl" strippath="true" balanceinertia="true" discardvisual="false" fusestatic="false" angle="radian" /></mujoco><link name="composite_part_1__1_">
+        <inertial>
+            <mass value="2.6283e-05" />
+            <origin xyz="2.02995e-18 0.0190036 1.19618e-18" rpy="0 -0 0" />
+            <inertia ixx="8.61897e-09" ixy="-1.99279e-26" ixz="2.83737e-25" iyy="2.12315e-08" iyz="1.18572e-26" izz="1.27697e-08" />
+        </inertial>
+        <visual>
+            <origin xyz="-0.037 0.016 0.01025" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/_.stl" scale="1 1 1" />
+            </geometry>
+            <material name="0.910000_0.910000_0.910000_0.000000_0.000000">
+                <color rgba="0.91 0.91 0.91 1" />
+            </material>
+        </visual>
+        <visual>
+            <origin xyz="-0.037 0.016 0.01025" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/__1.stl" scale="1 1 1" />
+            </geometry>
+            <material name="0.910000_0.910000_0.910000_0.000000_0.000000">
+                <texture />
+                <color rgba="0.91 0.91 0.91 1" />
+            </material>
+        </visual>
+        <visual>
+            <origin xyz="-0.037 0.016 0.01025" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/__2.stl" scale="1 1 1" />
+            </geometry>
+            <material name="0.910000_0.910000_0.910000_0.000000_0.000000">
+                <texture />
+                <color rgba="0.91 0.91 0.91 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="foot">
+        <inertial>
+            <mass value="0.0169288" />
+            <origin xyz="-3.09888e-10 1.37245e-11 -0.00858509" rpy="0 -0 0" />
+            <inertia ixx="2.88443e-06" ixy="-2.75012e-15" ixz="6.11791e-15" iyy="3.08268e-06" iyz="0" izz="5.67503e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="0 -3.25261e-18 -0.007" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Foot.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="foot_1">
+        <inertial>
+            <mass value="0.0169288" />
+            <origin xyz="-3.09888e-10 1.37245e-11 -0.00858509" rpy="0 -0 0" />
+            <inertia ixx="2.88443e-06" ixy="-2.75012e-15" ixz="6.11791e-15" iyy="3.08268e-06" iyz="0" izz="5.67503e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="0 -3.25261e-18 -0.007" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Foot.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="hip_base">
+        <inertial>
+            <mass value="0.00844854" />
+            <origin xyz="-0.00314735 -0.020625 -8.67362e-19" rpy="0 -0 0" />
+            <inertia ixx="1.21816e-06" ixy="0" ixz="0" iyy="1.21816e-06" iyz="0" izz="2.41378e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="-0.00314735 -0.020625 -0.002" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Hip_Base.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="hip_base_1">
+        <inertial>
+            <mass value="0.00844854" />
+            <origin xyz="-0.00314735 0.020625 -4.33681e-19" rpy="0 -0 0" />
+            <inertia ixx="1.21816e-06" ixy="0" ixz="0" iyy="1.21816e-06" iyz="0" izz="2.41378e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="-0.00314735 0.020625 -0.002" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Hip_Base.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="hip_joint_a">
+        <inertial>
+            <mass value="0.00290904" />
+            <origin xyz="5.05209e-18 0.002 -0.00726623" rpy="0 -0 0" />
+            <inertia ixx="1.46995e-07" ixy="0" ixz="0" iyy="4.48125e-07" iyz="0" izz="3.08888e-07" />
+        </inertial>
+        <visual>
+            <origin xyz="4.55365e-18 0.004 -0.018" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Hip_Joint_A.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="hip_joint_a_1">
+        <inertial>
+            <mass value="0.00290904" />
+            <origin xyz="0.00314735 0 0.00873377" rpy="0 -0 0" />
+            <inertia ixx="1.46995e-07" ixy="0" ixz="0" iyy="4.48125e-07" iyz="0" izz="3.08888e-07" />
+        </inertial>
+        <visual>
+            <origin xyz="0.00314735 0.002 -0.002" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Hip_Joint_A.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="hip_joint_a_2">
+        <inertial>
+            <mass value="0.00290904" />
+            <origin xyz="1.47423e-18 -0.002 -0.00726623" rpy="0 -0 0" />
+            <inertia ixx="1.46995e-07" ixy="0" ixz="0" iyy="4.48125e-07" iyz="0" izz="3.08888e-07" />
+        </inertial>
+        <visual>
+            <origin xyz="9.75782e-19 0 -0.018" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Hip_Joint_A.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="hip_joint_a_3">
+        <inertial>
+            <mass value="0.00290904" />
+            <origin xyz="0.00314735 0 0.00873377" rpy="0 -0 0" />
+            <inertia ixx="1.46995e-07" ixy="0" ixz="0" iyy="4.48125e-07" iyz="0" izz="3.08888e-07" />
+        </inertial>
+        <visual>
+            <origin xyz="0.00314735 0.002 -0.002" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Hip_Joint_A.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="hip_joint_b">
+        <inertial>
+            <mass value="0.00261436" />
+            <origin xyz="0.00946672 4.33681e-19 0.00893469" rpy="0 -0 0" />
+            <inertia ixx="1.33067e-07" ixy="0" ixz="-3.27371e-10" iyy="3.51663e-07" iyz="0" izz="2.25568e-07" />
+        </inertial>
+        <visual>
+            <origin xyz="0.00944204 0.002 -0.002" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Hip_Joint_B.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="hip_joint_b_1">
+        <inertial>
+            <mass value="0.00261436" />
+            <origin xyz="0.00317203 4.33681e-19 0.00893469" rpy="0 -0 0" />
+            <inertia ixx="1.33067e-07" ixy="0" ixz="-3.27371e-10" iyy="3.51663e-07" iyz="0" izz="2.25568e-07" />
+        </inertial>
+        <visual>
+            <origin xyz="0.00314735 0.002 -0.002" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Hip_Joint_B.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="hip_joint_b_2">
+        <inertial>
+            <mass value="0.00261436" />
+            <origin xyz="0.00317203 4.33681e-19 0.00893469" rpy="0 -0 0" />
+            <inertia ixx="1.33067e-07" ixy="0" ixz="-3.27371e-10" iyy="3.51663e-07" iyz="0" izz="2.25568e-07" />
+        </inertial>
+        <visual>
+            <origin xyz="0.00314735 0.002 -0.002" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Hip_Joint_B.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="hip_joint_b_3">
+        <inertial>
+            <mass value="0.00261436" />
+            <origin xyz="0.00946672 4.33681e-19 0.00893469" rpy="0 -0 0" />
+            <inertia ixx="1.33067e-07" ixy="0" ixz="-3.27371e-10" iyy="3.51663e-07" iyz="0" izz="2.25568e-07" />
+        </inertial>
+        <visual>
+            <origin xyz="0.00944204 0.002 -0.002" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Hip_Joint_B.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="motor">
+        <inertial>
+            <mass value="3.96216e-05" />
+            <origin xyz="-0.0215549 -0.0175 -0.0113" rpy="0 -0 0" />
+            <inertia ixx="6.18036e-09" ixy="3.65603e-12" ixz="0" iyy="8.67698e-09" iyz="0" izz="1.0789e-08" />
+        </inertial>
+        <visual>
+            <origin xyz="-0.0213 -0.0175 -0.0113" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Motor.stl" scale="1 1 1" />
+            </geometry>
+            <material name="0.000000_0.000000_0.000000_0.000000_0.000000">
+                <color rgba="0 0 0 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="motor_1">
+        <inertial>
+            <mass value="3.96216e-05" />
+            <origin xyz="0.0122451 0.01825 -3.27422e-19" rpy="0 -0 0" />
+            <inertia ixx="6.18036e-09" ixy="3.65603e-12" ixz="0" iyy="8.67698e-09" iyz="0" izz="1.0789e-08" />
+        </inertial>
+        <visual>
+            <origin xyz="0.0125 0.01825 -6.09262e-19" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Motor.stl" scale="1 1 1" />
+            </geometry>
+            <material name="0.000000_0.000000_0.000000_0.000000_0.000000">
+                <color rgba="0 0 0 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="motor_2">
+        <inertial>
+            <mass value="3.96216e-05" />
+            <origin xyz="-0.0177549 0.0175 -0.0113" rpy="0 -0 0" />
+            <inertia ixx="6.18036e-09" ixy="3.65603e-12" ixz="0" iyy="8.67698e-09" iyz="0" izz="1.0789e-08" />
+        </inertial>
+        <visual>
+            <origin xyz="-0.0175 0.0175 -0.0113" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Motor.stl" scale="1 1 1" />
+            </geometry>
+            <material name="0.000000_0.000000_0.000000_0.000000_0.000000">
+                <color rgba="0 0 0 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="motor_3">
+        <inertial>
+            <mass value="3.96216e-05" />
+            <origin xyz="-0.0215549 -0.0175 0.0113" rpy="0 -0 0" />
+            <inertia ixx="6.18036e-09" ixy="3.65603e-12" ixz="0" iyy="8.67698e-09" iyz="0" izz="1.0789e-08" />
+        </inertial>
+        <visual>
+            <origin xyz="-0.0213 -0.0175 0.0113" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Motor.stl" scale="1 1 1" />
+            </geometry>
+            <material name="0.000000_0.000000_0.000000_0.000000_0.000000">
+                <color rgba="0 0 0 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="motor_4">
+        <inertial>
+            <mass value="3.96216e-05" />
+            <origin xyz="0.0122451 0.01825 -3.27422e-19" rpy="0 -0 0" />
+            <inertia ixx="6.18036e-09" ixy="3.65603e-12" ixz="0" iyy="8.67698e-09" iyz="0" izz="1.0789e-08" />
+        </inertial>
+        <visual>
+            <origin xyz="0.0125 0.01825 -6.09262e-19" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Motor.stl" scale="1 1 1" />
+            </geometry>
+            <material name="0.000000_0.000000_0.000000_0.000000_0.000000">
+                <color rgba="0 0 0 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="motor_5">
+        <inertial>
+            <mass value="3.96216e-05" />
+            <origin xyz="-0.0177549 0.0175 -0.0113" rpy="0 -0 0" />
+            <inertia ixx="6.18036e-09" ixy="3.65603e-12" ixz="0" iyy="8.67698e-09" iyz="0" izz="1.0789e-08" />
+        </inertial>
+        <visual>
+            <origin xyz="-0.0175 0.0175 -0.0113" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Motor.stl" scale="1 1 1" />
+            </geometry>
+            <material name="0.000000_0.000000_0.000000_0.000000_0.000000">
+                <color rgba="0 0 0 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="part_1">
+        <inertial>
+            <mass value="0.000161186" />
+            <origin xyz="2.33127e-15 -3.0868e-18 0.0143964" rpy="0 -0 0" />
+            <inertia ixx="2.6017e-07" ixy="0" ixz="0" iyy="3.59183e-07" iyz="0" izz="5.14083e-07" />
+        </inertial>
+        <visual>
+            <origin xyz="-3.61706e-16 2.41455e-18 0" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Part_1.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="root" />
+    <link name="tibia">
+        <inertial>
+            <mass value="0.00863309" />
+            <origin xyz="0.0135326 -0.00375006 -0.000722925" rpy="0 -0 0" />
+            <inertia ixx="2.43651e-07" ixy="3.03318e-11" ixz="-9.56996e-08" iyy="6.58375e-06" iyz="1.31073e-12" izz="6.40749e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="-0.0257439 -0.00375 -0.00311756" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Tibia.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="tibia_1">
+        <inertial>
+            <mass value="0.00863309" />
+            <origin xyz="0.0392764 -0.00175006 0.00239463" rpy="0 -0 0" />
+            <inertia ixx="2.43651e-07" ixy="3.03318e-11" ixz="-9.56996e-08" iyy="6.58375e-06" iyz="1.31073e-12" izz="6.40749e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="1.0842e-18 -0.00175 3.25261e-19" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Tibia.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="tibia_2">
+        <inertial>
+            <mass value="0.00863309" />
+            <origin xyz="0.0392764 0.00174994 0.00239463" rpy="0 -0 0" />
+            <inertia ixx="2.43651e-07" ixy="3.03318e-11" ixz="-9.56996e-08" iyy="6.58375e-06" iyz="1.31073e-12" izz="6.40749e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="1.0842e-18 0.00175 3.25261e-19" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Tibia.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="tibia_3">
+        <inertial>
+            <mass value="0.00863309" />
+            <origin xyz="0.0135326 0.00374994 -0.000722925" rpy="0 -0 0" />
+            <inertia ixx="2.43651e-07" ixy="3.03318e-11" ixz="-9.56996e-08" iyy="6.58375e-06" iyz="1.31073e-12" izz="6.40749e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="-0.0257439 0.00375 -0.00311756" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Tibia.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="tube">
+        <inertial>
+            <mass value="0.0049323" />
+            <origin xyz="6.58249e-20 0.025 3.89817e-20" rpy="0 -0 0" />
+            <inertia ixx="1.03249e-06" ixy="0" ixz="0" iyy="9.8646e-09" iyz="0" izz="1.03249e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0.025 -1.22465e-19" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Tube.stl" scale="1 1 1" />
+            </geometry>
+            <material name="0.647059_0.647059_0.647059_0.000000_0.000000">
+                <color rgba="0.647059 0.647059 0.647059 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="tube_1">
+        <inertial>
+            <mass value="0.0049323" />
+            <origin xyz="-1.97475e-19 0.025 3.89817e-20" rpy="0 -0 0" />
+            <inertia ixx="1.03249e-06" ixy="0" ixz="0" iyy="9.8646e-09" iyz="0" izz="1.03249e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="-2.633e-19 0.025 -1.22465e-19" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Tube.stl" scale="1 1 1" />
+            </geometry>
+            <material name="0.647059_0.647059_0.647059_0.000000_0.000000">
+                <color rgba="0.647059 0.647059 0.647059 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="tube_2">
+        <inertial>
+            <mass value="0.0049323" />
+            <origin xyz="6.58249e-20 0.025 3.89817e-20" rpy="0 -0 0" />
+            <inertia ixx="1.03249e-06" ixy="0" ixz="0" iyy="9.8646e-09" iyz="0" izz="1.03249e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0.025 -1.22465e-19" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Tube.stl" scale="1 1 1" />
+            </geometry>
+            <material name="0.647059_0.647059_0.647059_0.000000_0.000000">
+                <color rgba="0.647059 0.647059 0.647059 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="tube_3">
+        <inertial>
+            <mass value="0.0049323" />
+            <origin xyz="6.58249e-20 -0.025 3.89817e-20" rpy="0 -0 0" />
+            <inertia ixx="1.03249e-06" ixy="0" ixz="0" iyy="9.8646e-09" iyz="0" izz="1.03249e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="0 -0.025 -1.22465e-19" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Tube.stl" scale="1 1 1" />
+            </geometry>
+            <material name="0.647059_0.647059_0.647059_0.000000_0.000000">
+                <color rgba="0.647059 0.647059 0.647059 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="tube_4">
+        <inertial>
+            <mass value="0.0049323" />
+            <origin xyz="6.58249e-20 0.025 3.89817e-20" rpy="0 -0 0" />
+            <inertia ixx="1.03249e-06" ixy="0" ixz="0" iyy="9.8646e-09" iyz="0" izz="1.03249e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0.025 -1.22465e-19" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Tube.stl" scale="1 1 1" />
+            </geometry>
+            <material name="0.647059_0.647059_0.647059_0.000000_0.000000">
+                <color rgba="0.647059 0.647059 0.647059 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="tube_5">
+        <inertial>
+            <mass value="0.0049323" />
+            <origin xyz="-1.97475e-19 0.025 3.89817e-20" rpy="0 -0 0" />
+            <inertia ixx="1.03249e-06" ixy="0" ixz="0" iyy="9.8646e-09" iyz="0" izz="1.03249e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="-2.633e-19 0.025 -1.22465e-19" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Tube.stl" scale="1 1 1" />
+            </geometry>
+            <material name="0.647059_0.647059_0.647059_0.000000_0.000000">
+                <color rgba="0.647059 0.647059 0.647059 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="upper_leg_a">
+        <inertial>
+            <mass value="0.0067206" />
+            <origin xyz="0.00531306 2.37861e-05 0.00337354" rpy="0 -0 0" />
+            <inertia ixx="5.11678e-07" ixy="-7.9807e-11" ixz="1.72034e-08" iyy="9.83218e-07" iyz="2.80639e-11" izz="1.45952e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0 0" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Upper_Leg_A.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="upper_leg_a_1">
+        <inertial>
+            <mass value="0.0067206" />
+            <origin xyz="0.00847556 -0.0102485 -0.000126464" rpy="0 -0 0" />
+            <inertia ixx="5.11678e-07" ixy="-7.9807e-11" ixz="1.72034e-08" iyy="9.83218e-07" iyz="2.80639e-11" izz="1.45952e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="0.0031625 -0.0102723 -0.0035" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Upper_Leg_A.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="upper_leg_b">
+        <inertial>
+            <mass value="0.00572982" />
+            <origin xyz="-0.00664884 -0.0102429 0.00339588" rpy="0 -0 0" />
+            <inertia ixx="4.47438e-07" ixy="6.32076e-10" ixz="6.38448e-09" iyy="7.3785e-07" iyz="3.33347e-11" izz="1.15518e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="-0.0068375 -0.0102723 0" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Upper_Leg_B.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <link name="upper_leg_b_1">
+        <inertial>
+            <mass value="0.00572982" />
+            <origin xyz="-0.00664884 0.0102571 0.00339588" rpy="0 -0 0" />
+            <inertia ixx="4.47438e-07" ixy="6.32076e-10" ixz="6.38448e-09" iyy="7.3785e-07" iyz="3.33347e-11" izz="1.15518e-06" />
+        </inertial>
+        <visual>
+            <origin xyz="-0.0068375 0.0102277 0" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://assembly_simple/meshes/Upper_Leg_B.stl" scale="1 1 1" />
+            </geometry>
+            <material name="1.000000_1.000000_1.000000_0.000000_0.000000">
+                <color rgba="1 1 1 1" />
+            </material>
+        </visual>
+    </link>
+    <joint name="fastened_1" type="fixed">
+        <origin xyz="0.0174777 0.0237723 2.74086e-16" rpy="1.12932e-15 -1.13611e-14 -1.5708" />
+        <axis xyz="0.984808 0 0.173648" />
+        <parent link="hip_base_1" />
+        <child link="hip_joint_b_2" />
+    </joint>
+    <joint name="fastened_1_1" type="fixed">
+        <origin xyz="0.03 0.00075 0.0113" rpy="3.14159 -0 3.14159" />
+        <axis xyz="-0 1 -0" />
+        <parent link="motor_4" />
+        <child link="composite_part_1__1_" />
+    </joint>
+    <joint name="fastened_1_2" type="fixed">
+        <origin xyz="-0.037 0.016 0.04625" rpy="0 -0 1.12104e-43" />
+        <axis xyz="0 0 -1" />
+        <parent link="composite_part_1__1_" />
+        <child link="part_1" />
+    </joint>
+    <joint name="fastened_1_3" type="fixed">
+        <origin xyz="0.0257439 -0.0055 0.00311756" rpy="0 -1.5708 -7.47357e-16" />
+        <axis xyz="0 -1 0" />
+        <parent link="tibia_1" />
+        <child link="tube" />
+    </joint>
+    <joint name="fastened_1_4" type="fixed">
+        <origin xyz="0.0174777 -0.0174777 -1.14492e-16" rpy="-1.36998e-14 1.45472e-15 -1.5708" />
+        <axis xyz="0.984808 0 0.173648" />
+        <parent link="hip_base" />
+        <child link="hip_joint_b_1" />
+    </joint>
+    <joint name="fastened_1_5" type="fixed">
+        <origin xyz="-2.1684e-19 -0.05 -2.77556e-17" rpy="0 1.5708 -3.54049e-17" />
+        <axis xyz="-0 1 -0" />
+        <parent link="tube_3" />
+        <child link="tibia_3" />
+    </joint>
+    <joint name="fastened_2" type="fixed">
+        <origin xyz="-0.0038 -0.035 0.0226" rpy="-1.5708 3.39019e-15 -3.14159" />
+        <axis xyz="-0 -0 -1" />
+        <parent link="motor_3" />
+        <child link="upper_leg_b_1" />
+    </joint>
+    <joint name="fastened_2_1" type="fixed">
+        <origin xyz="9.71445e-17 0.04125 -6.97359e-16" rpy="-3.14159 -4.16334e-17 -3.14159" />
+        <axis xyz="0.984808 0 0.173648" />
+        <parent link="hip_base_1" />
+        <child link="hip_joint_a_3" />
+    </joint>
+    <joint name="fastened_2_2" type="fixed">
+        <origin xyz="-4.33681e-19 0.05 0" rpy="0 1.5708 -2.95664e-16" />
+        <axis xyz="-0 -1 -0" />
+        <parent link="tube" />
+        <child link="tibia" />
+    </joint>
+    <joint name="fastened_2_3" type="fixed">
+        <origin xyz="-0.00314735 0.002 -0.016" rpy="3.14159 -3.32465e-15 -3.14159" />
+        <axis xyz="0.984808 -0 0.173648" />
+        <parent link="hip_joint_a" />
+        <child link="hip_base" />
+    </joint>
+    <joint name="fastened_2_4" type="fixed">
+        <origin xyz="0.0257439 0.0055 0.00311756" rpy="0 -1.5708 3.19778e-15" />
+        <axis xyz="0 1 0" />
+        <parent link="tibia_2" />
+        <child link="tube_3" />
+    </joint>
+    <joint name="fastened_3" type="fixed">
+        <origin xyz="-0.00314735 -0.002 -0.016" rpy="3.14159 4.16334e-17 -3.14159" />
+        <axis xyz="0.984808 -0 0.173648" />
+        <parent link="hip_joint_a_2" />
+        <child link="hip_base_1" />
+    </joint>
+    <joint name="fastened_3_1" type="fixed">
+        <origin xyz="-0.01 0 0.0025" rpy="1.5708 -1.34214e-15 -2.47772e-15" />
+        <axis xyz="0 1 0" />
+        <parent link="upper_leg_b_1" />
+        <child link="motor" />
+    </joint>
+    <joint name="fastened_3_2" type="fixed">
+        <origin xyz="0.0251533 -6.93889e-18 0.003054" rpy="0 1.5708 -3.14159" />
+        <axis xyz="0 -1 0" />
+        <parent link="tibia" />
+        <child link="tube_1" />
+    </joint>
+    <joint name="fastened_3_3" type="fixed">
+        <origin xyz="4.48209e-16 -0.04125 -1.44242e-14" rpy="3.14159 3.32465e-15 -3.14159" />
+        <axis xyz="0.984808 0 0.173648" />
+        <parent link="hip_base" />
+        <child link="hip_joint_a_1" />
+    </joint>
+    <joint name="fastened_3_4" type="fixed">
+        <origin xyz="0.0508971 0.0055 0.00617156" rpy="0 1.5708 3.14159" />
+        <axis xyz="0 -1 0" />
+        <parent link="tibia_2" />
+        <child link="tube_5" />
+    </joint>
+    <joint name="fastened_4" type="fixed">
+        <origin xyz="-0.0237723 0.011183 -6.93889e-18" rpy="-1.1256e-15 1.13617e-14 1.5708" />
+        <axis xyz="-0.984808 0 0.173648" />
+        <parent link="hip_base_1" />
+        <child link="hip_joint_b_3" />
+    </joint>
+    <joint name="fastened_4_1" type="fixed">
+        <origin xyz="0.0503981 -6.93889e-18 -0.00425089" rpy="0 1.5708 3.14159" />
+        <axis xyz="0 -1 0" />
+        <parent link="tibia" />
+        <child link="tube_2" />
+    </joint>
+    <joint name="fastened_4_2" type="fixed">
+        <origin xyz="-0.0237723 -0.030067 2.70617e-15" rpy="1.36566e-14 2.5113e-13 1.5708" />
+        <axis xyz="-0.984808 0 0.173648" />
+        <parent link="hip_base" />
+        <child link="hip_joint_b" />
+    </joint>
+    <joint name="fastened_4_3" type="fixed">
+        <origin xyz="0.0761419 0.0055 -0.00113333" rpy="0 1.5708 3.14159" />
+        <axis xyz="0 -1 0" />
+        <parent link="tibia_2" />
+        <child link="tube_4" />
+    </joint>
+    <joint name="fastened_4_4" type="fixed">
+        <origin xyz="0.01 -0.0205 -0.0025" rpy="-1.5708 -6.56156e-16 -3.14159" />
+        <axis xyz="0 -1 0" />
+        <parent link="upper_leg_a_1" />
+        <child link="motor_2" />
+    </joint>
+    <joint name="fastened_5" type="fixed">
+        <origin xyz="-0.074 0 0.0205" rpy="0 -0 1.12104e-43" />
+        <axis xyz="0 -1 0" />
+        <parent link="composite_part_1__1_" />
+        <child link="motor_5" />
+    </joint>
+    <joint name="fastened_6" type="fixed">
+        <origin xyz="0.03 0.00075 0.0113" rpy="1.5708 -6.25452e-16 -1.31055e-16" />
+        <axis xyz="-0 -0 -1" />
+        <parent link="motor_1" />
+        <child link="upper_leg_a_1" />
+    </joint>
+    <joint name="fastened_7" type="fixed">
+        <origin xyz="0.0338 0.03575 0.0113" rpy="1.5708 1.42864e-15 -3.14159" />
+        <axis xyz="0 0 -1" />
+        <parent link="motor_1" />
+        <child link="upper_leg_b" />
+    </joint>
+    <joint name="fastened_8" type="fixed">
+        <origin xyz="-0.0031625 0.0102723 0.0025" rpy="1.5708 -2.58954e-16 -1.54689e-15" />
+        <axis xyz="-0 1 -0" />
+        <parent link="upper_leg_a" />
+        <child link="motor_3" />
+    </joint>
+    <joint name="fixed_node_to_root_joint" type="fixed">
+        <origin xyz="0.082375 0.00290272 -0.0679125" rpy="0 1.5708 -3.84915e-14" />
+        <axis xyz="0 0 1" />
+        <parent link="root" />
+        <child link="upper_leg_a" />
+    </joint>
+    <joint name="hip_pitch_l" type="revolute">
+        <origin xyz="-0.0338 0.00075 0.0113" rpy="0 1.5708 8.11363e-17" />
+        <axis xyz="0 -1 0" />
+        <parent link="motor_3" />
+        <child link="hip_joint_a" />
+        <limit effort="1" velocity="1" lower="-1.39626" upper="1.39626" />
+    <dynamics damping="0.05" /></joint>
+    <joint name="hip_pitch_r" type="revolute">
+        <origin xyz="0.00314735 -0.002 0.016" rpy="0 -1.5708 3.14159" />
+        <axis xyz="-0 -1 -0" />
+        <parent link="hip_joint_b_2" />
+        <child link="motor_1" />
+        <limit effort="1" velocity="1" lower="-1.39626" upper="1.39626" />
+    <dynamics damping="0.05" /></joint>
+    <joint name="hip_roll_l" type="revolute">
+        <origin xyz="0.00314735 -0.002 0.016" rpy="-3.14159 -3.08556e-15 3.55307e-28" />
+        <axis xyz="-0 -1 -0" />
+        <parent link="hip_joint_b_1" />
+        <child link="motor_4" />
+        <limit effort="1" velocity="1" lower="-2.26893" upper="0.0872665" />
+    <dynamics damping="0.05" /></joint>
+    <joint name="hip_roll_r" type="revolute">
+        <origin xyz="-0.03 -0.00075 -0.0113" rpy="-4.50273e-31 -8.36484e-15 1.07658e-16" />
+        <axis xyz="0 1 0" />
+        <parent link="motor_5" />
+        <child link="hip_joint_a_2" />
+        <limit effort="1" velocity="1" lower="-0.0872665" upper="2.26893" />
+    <dynamics damping="0.05" /></joint>
+    <joint name="knee_l" type="revolute">
+        <origin xyz="-0.0338 -0.03575 -0.0113" rpy="-5.26172e-17 -5.37322e-14 -3.14159" />
+        <axis xyz="0 -1 0" />
+        <parent link="motor" />
+        <child link="tibia_2" />
+        <limit effort="1" velocity="1" lower="-1.39626" upper="1.39626" />
+    <dynamics damping="0.05" /></joint>
+    <joint name="knee_r" type="revolute">
+        <origin xyz="-0.03 -0.00075 -0.0113" rpy="3.14159 2.49218e-15 3.14159" />
+        <axis xyz="0 1 0" />
+        <parent link="motor_2" />
+        <child link="tibia_1" />
+        <limit effort="1" velocity="1" lower="-1.39626" upper="1.39626" />
+    <dynamics damping="0.05" /></joint>
+    <joint name="ankle_r" type="revolute">
+        <origin xyz="-3.25261e-18 0.025 -2.77556e-17" rpy="0.5321 7.27196e-15 -1.5708" />
+        <axis xyz="1 -0 -0" />
+        <parent link="tube_2" />
+        <child link="foot" />
+    <limit lower="-0.314159" upper="0.296706" effort="0" velocity="20" /><dynamics damping="0.02" friction="0.003" /></joint>
+    <joint name="ankle_l" type="revolute">
+        <origin xyz="0 0.025 2.77556e-17" rpy="0.528547 5.55112e-17 -1.5708" />
+        <axis xyz="1 -0 -0" />
+        <parent link="tube_4" />
+        <child link="foot_1" />
+    <limit lower="-0.314159" upper="0.296706" effort="0" velocity="20" /><dynamics damping="0.02" friction="0.003" /></joint>
+</robot>
