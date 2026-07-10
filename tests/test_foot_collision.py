@@ -1,13 +1,13 @@
-"""Tests for ankle joint limits and whole-body collision configuration."""
+"""Tests for the passive foot-tilt joint's limits and whole-body collision configuration."""
 import math
 import mujoco
 import numpy as np
 import pytest
 
 
-# Ankle joint limit constants (in radians)
-ANKLE_LO = math.radians(12 - 30)  # radians(-18) ≈ -0.31416 rad
-ANKLE_HI = math.radians(47 - 30)  # radians(17) ≈ 0.29671 rad
+# Foot (passive hardstop) joint limit constants (in radians)
+FOOT_LO = math.radians(12 - 30)  # radians(-18) ≈ -0.31416 rad
+FOOT_HI = math.radians(47 - 30)  # radians(17) ≈ 0.29671 rad
 
 
 @pytest.mark.parametrize(
@@ -17,34 +17,38 @@ ANKLE_HI = math.radians(47 - 30)  # radians(17) ≈ 0.29671 rad
         "model_path_no_jetson",
     ],
 )
-def test_ankle_joint_limits(request, model_fixture):
+def test_foot_joint_limits(request, model_fixture):
     """
-    Test that both ankle joints have correct limit ranges.
+    Test that both passive foot-tilt joints have correct limit ranges.
 
-    The two ankle joints (ankle_l and ankle_r) are passive hinge joints with
-    hardstop limits that should match the computed ANKLE_LO and ANKLE_HI values.
+    The two foot joints (foot_l and foot_r) are passive hinge joints with
+    hardstop limits that should match the computed FOOT_LO and FOOT_HI values.
+    Named "foot" (not "ankle") to avoid colliding with the actuated ankle_l/r
+    joints, which match the motor controller / joint encoder firmware naming
+    on the Jetson (see ~/Work/biped python_st3215 package) for the lowest
+    actuated joint.
     """
     model_path = request.getfixturevalue(model_fixture)
     model = mujoco.MjModel.from_xml_path(model_path)
 
-    # Expected range for both ankles
-    expected_range = np.array([ANKLE_LO, ANKLE_HI])
+    # Expected range for both foot joints
+    expected_range = np.array([FOOT_LO, FOOT_HI])
     tolerance = 0.001
 
-    # Test both ankle joints
-    for ankle_name in ["ankle_l", "ankle_r"]:
+    # Test both foot joints
+    for foot_name in ["foot_l", "foot_r"]:
         # Look up joint id
-        joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, ankle_name)
-        assert joint_id >= 0, f"Joint '{ankle_name}' not found in model"
+        joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, foot_name)
+        assert joint_id >= 0, f"Joint '{foot_name}' not found in model"
 
         # Check that joint limits are enabled
         is_limited = model.jnt_limited[joint_id]
-        assert is_limited, f"Joint '{ankle_name}' (id {joint_id}) does not have limits enabled"
+        assert is_limited, f"Joint '{foot_name}' (id {joint_id}) does not have limits enabled"
 
         # Check the range
         actual_range = model.jnt_range[joint_id]
         assert np.allclose(actual_range, expected_range, atol=tolerance), \
-            f"Joint '{ankle_name}' (id {joint_id}): range {actual_range} not close to {expected_range}"
+            f"Joint '{foot_name}' (id {joint_id}): range {actual_range} not close to {expected_range}"
 
 
 @pytest.mark.parametrize(
@@ -89,7 +93,9 @@ def test_wholebody_mesh_collision_flags(request, model_fixture):
     `skip_bodies = set(FOOT_BODIES.keys())` logic. The exclusion is by
     parent BODY name, not by geom name (the visual geom being excluded is
     unnamed; only the separately-added collision geom is named
-    "foot_col_*").
+    "foot_col_*"). Note: these BODY names ("foot", "foot_1") are a separate
+    MuJoCo namespace from the passive foot_l/foot_r JOINT names above - they
+    come from Onshape mesh/part naming and are unrelated to the joint rename.
 
     This guards against regression where the robot fell through the floor
     because only the feet had collision enabled.

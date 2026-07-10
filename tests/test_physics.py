@@ -113,17 +113,17 @@ class TestFreefall:
         print(f"--- Test PASSED ---\n")
 
 
-class TestKneePendulum:
-    """Test suite for knee pendulum dynamics: energy conservation and oscillation period."""
+class TestAnklePendulum:
+    """Test suite for ankle pendulum dynamics: energy conservation and oscillation period."""
 
     @staticmethod
-    def build_knee_pendulum_model(biped_model_path):
-        """Build a standalone single-knee-pendulum rig for energy/period validation."""
+    def build_ankle_pendulum_model(biped_model_path):
+        """Build a standalone single-ankle-pendulum rig for energy/period validation."""
         import xml.etree.ElementTree as ET
         import os
         import copy
 
-        # Step 1: get the REAL world pose of the knee's immediate parent body ("motor")
+        # Step 1: get the REAL world pose of the ankle joint's immediate parent body ("motor")
         # at the stand keyframe, from the actual compiled biped model.
         m_full = mujoco.MjModel.from_xml_path(biped_model_path)
         d_full = mujoco.MjData(m_full)
@@ -148,7 +148,7 @@ class TestKneePendulum:
         tibia2 = find_body(wb, 'tibia_2')
 
         # Step 3: build a fresh minimal MJCF
-        new_root = ET.Element('mujoco', {'model': 'knee_pendulum'})
+        new_root = ET.Element('mujoco', {'model': 'ankle_pendulum'})
         new_root.append(root_elem.find('compiler'))
         new_root.append(root_elem.find('asset'))
 
@@ -163,7 +163,7 @@ class TestKneePendulum:
         xml_str = ET.tostring(new_root, encoding='unicode')
         tmp_path = os.path.join(
             os.path.dirname(os.path.abspath(biped_model_path)),
-            '_tmp_knee_pendulum_test.xml'
+            '_tmp_ankle_pendulum_test.xml'
         )
         with open(tmp_path, 'w') as f:
             f.write(xml_str)
@@ -173,12 +173,12 @@ class TestKneePendulum:
             os.remove(tmp_path)
         return m
 
-    def test_knee_pendulum_energy_and_period(self):
+    def test_ankle_pendulum_energy_and_period(self):
         """
-        Test energy conservation and oscillation period of an isolated knee pendulum.
+        Test energy conservation and oscillation period of an isolated ankle pendulum.
 
         This test:
-        - Builds a standalone pendulum rig containing only the left knee and ankle joints
+        - Builds a standalone pendulum rig containing only the left ankle and foot joints
         - Zeros all dissipation (damping, friction loss, armature)
         - Computes the analytical period using finite-difference gravitational stiffness
         - Simulates for 5 seconds with energy tracking enabled
@@ -186,29 +186,29 @@ class TestKneePendulum:
         - Verifies oscillation period matches analytic prediction (within 5%)
         """
         model_path = "models/mjcf/biped.xml"
-        model = self.build_knee_pendulum_model(model_path)
+        model = self.build_ankle_pendulum_model(model_path)
 
         # Zero all dissipation in-memory
         model.dof_damping[:] = 0
         model.dof_frictionloss[:] = 0
         model.dof_armature[:] = 0
 
-        # Find the knee_l joint's qpos and qvel indices
-        knee_joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "knee_l")
-        assert knee_joint_id >= 0, "Joint 'knee_l' not found in pendulum model"
+        # Find the ankle_l joint's qpos and qvel indices
+        ankle_joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "ankle_l")
+        assert ankle_joint_id >= 0, "Joint 'ankle_l' not found in pendulum model"
 
-        knee_qpos_idx = model.jnt_qposadr[knee_joint_id]
-        knee_qvel_idx = model.jnt_dofadr[knee_joint_id]
+        ankle_qpos_idx = model.jnt_qposadr[ankle_joint_id]
+        ankle_qvel_idx = model.jnt_dofadr[ankle_joint_id]
 
         # Verify model structure
         print(f"\n--- Pendulum Model Structure ---")
         print(f"nq={model.nq}, nv={model.nv}, njnt={model.njnt}")
-        print(f"knee_l qpos index: {knee_qpos_idx}")
-        print(f"knee_l qvel index: {knee_qvel_idx}")
+        print(f"ankle_l qpos index: {ankle_qpos_idx}")
+        print(f"ankle_l qvel index: {ankle_qvel_idx}")
 
         # Create data and set initial condition
         data = mujoco.MjData(model)
-        data.qpos[knee_qpos_idx] = 0.3
+        data.qpos[ankle_qpos_idx] = 0.3
         data.qvel[:] = 0
 
         # Forward pass
@@ -218,23 +218,23 @@ class TestKneePendulum:
         # Compute effective inertia
         M = np.zeros((model.nv, model.nv))
         mujoco.mj_fullM(model, data, M)
-        I_eff = M[knee_qvel_idx, knee_qvel_idx]
+        I_eff = M[ankle_qvel_idx, ankle_qvel_idx]
 
         # Compute gravitational stiffness via finite differencing
         eps = 1e-3
         data_plus = mujoco.MjData(model)
         data_minus = mujoco.MjData(model)
 
-        data_plus.qpos[knee_qpos_idx] = eps
+        data_plus.qpos[ankle_qpos_idx] = eps
         data_plus.qvel[:] = 0
         mujoco.mj_forward(model, data_plus)
 
-        data_minus.qpos[knee_qpos_idx] = -eps
+        data_minus.qpos[ankle_qpos_idx] = -eps
         data_minus.qvel[:] = 0
         mujoco.mj_forward(model, data_minus)
 
-        tau_plus = data_plus.qfrc_bias[knee_qvel_idx]
-        tau_minus = data_minus.qfrc_bias[knee_qvel_idx]
+        tau_plus = data_plus.qfrc_bias[ankle_qvel_idx]
+        tau_minus = data_minus.qfrc_bias[ankle_qvel_idx]
         k_est = -(tau_plus - tau_minus) / (2 * eps)
 
         omega = np.sqrt(abs(k_est) / I_eff)
@@ -249,7 +249,7 @@ class TestKneePendulum:
         # ===== Enable energy tracking and simulate =====
         model.opt.enableflags |= mujoco.mjtEnableBit.mjENBL_ENERGY
         data_sim = mujoco.MjData(model)
-        data_sim.qpos[knee_qpos_idx] = 0.3
+        data_sim.qpos[ankle_qpos_idx] = 0.3
         data_sim.qvel[:] = 0
         mujoco.mj_forward(model, data_sim)
 
@@ -258,12 +258,12 @@ class TestKneePendulum:
         # Simulate for 5 seconds
         num_steps = int(5.0 / model.opt.timestep)
         times = []
-        knee_angles = []
+        ankle_angles = []
         energies = []
 
         for step_idx in range(num_steps):
             times.append(data_sim.time)
-            knee_angles.append(data_sim.qpos[knee_qpos_idx])
+            ankle_angles.append(data_sim.qpos[ankle_qpos_idx])
             energies.append(data_sim.energy[0] + data_sim.energy[1])
             mujoco.mj_step(model, data_sim)
 
@@ -283,12 +283,12 @@ class TestKneePendulum:
         )
 
         # ===== Period assertion =====
-        # Find local maxima (peaks) in the knee-angle time series
-        knee_angles_arr = np.array(knee_angles)
+        # Find local maxima (peaks) in the ankle-angle time series
+        ankle_angles_arr = np.array(ankle_angles)
         peaks = []
-        for i in range(1, len(knee_angles_arr) - 1):
-            if (knee_angles_arr[i] > knee_angles_arr[i-1] and
-                knee_angles_arr[i] > knee_angles_arr[i+1]):
+        for i in range(1, len(ankle_angles_arr) - 1):
+            if (ankle_angles_arr[i] > ankle_angles_arr[i-1] and
+                ankle_angles_arr[i] > ankle_angles_arr[i+1]):
                 peaks.append(i)
 
         assert len(peaks) >= 3, (
@@ -614,7 +614,7 @@ class TestFrictionBreakaway:
         foot_copy = copy.deepcopy(foot)
         foot_copy.set('pos', '0 0 0.02')  # small clearance above floor, let it settle
         foot_copy.set('quat', '1 0 0 0')
-        # Remove the ankle_l joint that foot_1 normally has, replace with a freejoint
+        # Remove the foot_l joint that foot_1 normally has, replace with a freejoint
         # so it's a free-sliding rigid body, not an articulated joint.
         j = foot_copy.find('joint')
         if j is not None:

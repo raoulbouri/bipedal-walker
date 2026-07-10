@@ -9,9 +9,28 @@ MJURDF = str(root_dir / "models/urdf/biped_for_mujoco.urdf")
 RAW = str(root_dir / "models/mjcf/biped_raw.xml")
 MESHDIR = str(root_dir / "meshes/stl")
 
-ANKLE_LO = math.radians(12 - 30)
-ANKLE_HI = math.radians(47 - 30)
-ANKLE = {"revolute_1": "ankle_r", "revolute_1_1": "ankle_l"}
+FOOT_LO = math.radians(12 - 30)
+FOOT_HI = math.radians(47 - 30)
+
+# Rename Onshape mate-connector names to hardware-consistent names (matches
+# the naming used in the motor controller / joint encoder firmware on the
+# Jetson, see ~/Work/biped python_st3215 package). hip_roll_l/r already
+# matches hardware (hip motor) - no rename needed there.
+#   hip_pitch_l/r (Onshape name) -> knee_l/r (hardware name): the physical
+#     joint Onshape's mate-connector naming called "hip_pitch" is actuated
+#     as the knee on the real hardware.
+#   knee_l/r (Onshape name) -> ankle_l/r (hardware name): the physical joint
+#     Onshape called "knee" is the lowest actuated joint, named "ankle" in
+#     the motor controller / joint encoder firmware.
+ACTUATED_RENAME = {
+    "hip_pitch_l": "knee_l", "hip_pitch_r": "knee_r",
+    "knee_l": "ankle_l", "knee_r": "ankle_r",
+}
+# Passive hardstop joint (foot tilt, no actuator, hardware-measured hardstops
+# at 12deg/47deg with a 30deg export offset). Renamed from "ankle" to "foot"
+# to avoid colliding with the actuated ankle_l/r above - hardware firmware's
+# "ankle" refers to the actuated joint above, not this passive one.
+FOOT_HARDSTOP = {"revolute_1": "foot_r", "revolute_1_1": "foot_l"}
 
 tree = ET.parse(SRC)
 robot = tree.getroot()
@@ -27,23 +46,27 @@ robot.insert(0, mj)
 for mesh in robot.iter("mesh"):
     mesh.set("filename", mesh.get("filename").replace(".gltf", ".stl"))
 for j in robot.findall("joint"):
-    if j.get("name") in ANKLE:
-        j.set("name", ANKLE[j.get("name")])
+    name = j.get("name")
+    if name in FOOT_HARDSTOP:
+        j.set("name", FOOT_HARDSTOP[name])
         j.set("type", "revolute")
-        for tag, attrs in (("limit", {"lower": f"{ANKLE_LO:.6f}", "upper": f"{ANKLE_HI:.6f}",
+        for tag, attrs in (("limit", {"lower": f"{FOOT_LO:.6f}", "upper": f"{FOOT_HI:.6f}",
                                        "effort": "0", "velocity": "20"}),
                            ("dynamics", {"damping": "0.02", "friction": "0.003"})):
             e = j.find(tag) or ET.SubElement(j, tag)
             for k, v in attrs.items():
                 e.set(k, v)
-    elif j.get("type") == "revolute":
-        # light damping on actuated joints for sim stability
-        d = j.find("dynamics") or ET.SubElement(j, "dynamics")
-        if d.get("damping") is None:
-            d.set("damping", "0.05")
-        lim = j.find("limit")
-        if lim is not None:
-            lim.set("effort", "2.5")
+    else:
+        if name in ACTUATED_RENAME:
+            j.set("name", ACTUATED_RENAME[name])
+        if j.get("type") == "revolute":
+            # light damping on actuated joints for sim stability
+            d = j.find("dynamics") or ET.SubElement(j, "dynamics")
+            if d.get("damping") is None:
+                d.set("damping", "0.05")
+            lim = j.find("limit")
+            if lim is not None:
+                lim.set("effort", "2.5")
 
 tree.write(MJURDF, encoding="utf-8", xml_declaration=True)
 print("wrote", MJURDF)

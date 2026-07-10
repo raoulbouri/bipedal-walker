@@ -27,9 +27,9 @@ class TestJointSensors:
         - Asserts that sensor readings match the state exactly (atol=1e-12)
 
         The 8 joints are:
-        - hip_roll_l, hip_pitch_l, knee_l (left leg)
-        - hip_roll_r, hip_pitch_r, knee_r (right leg)
-        - ankle_l, ankle_r (ankles)
+        - hip_roll_l, knee_l, ankle_l (left leg)
+        - hip_roll_r, knee_r, ankle_r (right leg)
+        - foot_l, foot_r (ankles)
 
         Each joint has one pos_<name> and one vel_<name> sensor.
         """
@@ -40,13 +40,13 @@ class TestJointSensors:
         # Define the 8 joint names
         joint_names = [
             "hip_roll_l",
-            "hip_pitch_l",
             "knee_l",
-            "hip_roll_r",
-            "hip_pitch_r",
-            "knee_r",
             "ankle_l",
+            "hip_roll_r",
+            "knee_r",
             "ankle_r",
+            "foot_l",
+            "foot_r",
         ]
 
         # Build a dictionary with joint info: joint_id, qposadr, dofadr, range, pos_sensor_adr, vel_sensor_adr
@@ -172,13 +172,13 @@ class TestJointSensors:
 
         joint_names = [
             "hip_roll_l",
-            "hip_pitch_l",
             "knee_l",
-            "hip_roll_r",
-            "hip_pitch_r",
-            "knee_r",
             "ankle_l",
+            "hip_roll_r",
+            "knee_r",
             "ankle_r",
+            "foot_l",
+            "foot_r",
         ]
 
         print(f"\n--- Individual Joint Ranges and Sensors ---\n")
@@ -840,13 +840,13 @@ class TestJointSensors:
         # Define the 8 joint names
         joint_names = [
             "hip_roll_l",
-            "hip_pitch_l",
             "knee_l",
-            "hip_roll_r",
-            "hip_pitch_r",
-            "knee_r",
             "ankle_l",
+            "hip_roll_r",
+            "knee_r",
             "ankle_r",
+            "foot_l",
+            "foot_r",
         ]
 
         # Build joint info dictionary

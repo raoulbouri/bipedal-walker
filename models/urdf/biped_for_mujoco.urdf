@@ -721,14 +721,14 @@
         <parent link="root" />
         <child link="upper_leg_a" />
     </joint>
-    <joint name="hip_pitch_l" type="revolute">
+    <joint name="knee_l" type="revolute">
         <origin xyz="-0.0338 0.00075 0.0113" rpy="0 1.5708 8.11363e-17" />
         <axis xyz="0 -1 0" />
         <parent link="motor_3" />
         <child link="hip_joint_a" />
         <limit effort="2.5" velocity="1" lower="-1.39626" upper="1.39626" />
     <dynamics damping="0.05" /></joint>
-    <joint name="hip_pitch_r" type="revolute">
+    <joint name="knee_r" type="revolute">
         <origin xyz="0.00314735 -0.002 0.016" rpy="0 -1.5708 3.14159" />
         <axis xyz="-0 -1 -0" />
         <parent link="hip_joint_b_2" />
@@ -749,27 +749,27 @@
         <child link="hip_joint_a_2" />
         <limit effort="2.5" velocity="1" lower="-0.0872665" upper="2.26893" />
     <dynamics damping="0.05" /></joint>
-    <joint name="knee_l" type="revolute">
+    <joint name="ankle_l" type="revolute">
         <origin xyz="-0.0338 -0.03575 -0.0113" rpy="-5.26172e-17 -5.37322e-14 -3.14159" />
         <axis xyz="0 -1 0" />
         <parent link="motor" />
         <child link="tibia_2" />
         <limit effort="2.5" velocity="1" lower="-1.39626" upper="1.39626" />
     <dynamics damping="0.05" /></joint>
-    <joint name="knee_r" type="revolute">
+    <joint name="ankle_r" type="revolute">
         <origin xyz="-0.03 -0.00075 -0.0113" rpy="3.14159 2.49218e-15 3.14159" />
         <axis xyz="0 1 0" />
         <parent link="motor_2" />
         <child link="tibia_1" />
         <limit effort="2.5" velocity="1" lower="-1.39626" upper="1.39626" />
     <dynamics damping="0.05" /></joint>
-    <joint name="ankle_r" type="revolute">
+    <joint name="foot_r" type="revolute">
         <origin xyz="-3.25261e-18 0.025 -2.77556e-17" rpy="0.5321 7.27196e-15 -1.5708" />
         <axis xyz="1 -0 -0" />
         <parent link="tube_2" />
         <child link="foot" />
     <limit lower="-0.314159" upper="0.296706" effort="0" velocity="20" /><dynamics damping="0.02" friction="0.003" /></joint>
-    <joint name="ankle_l" type="revolute">
+    <joint name="foot_l" type="revolute">
         <origin xyz="0 0.025 2.77556e-17" rpy="0.528547 5.55112e-17 -1.5708" />
         <axis xyz="1 -0 -0" />
         <parent link="tube_4" />

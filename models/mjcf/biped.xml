@@ -35,7 +35,7 @@
               <geom pos="-0.0213 -0.0175 -0.0113" quat="1 0 0 0" type="mesh" contype="1" conaffinity="1" group="1" density="0" rgba="0 0 0 1" mesh="Motor" friction="1.0 0.02 0.001" />
               <body name="tibia_2" pos="-0.0338 -0.03575 -0.0113" quat="1.32679e-06 0 0 -1">
                 <inertial pos="0.0392764 0.00174994 0.00239463" quat="0.503866 0.496106 0.496104 0.503864" mass="0.005" diaginertia="3.81309e-06 3.71187e-06 1.40255e-07" />
-                <joint name="knee_l" pos="0 0 0" axis="0 -1 0" range="-1.39626 1.39626" actuatorfrcrange="-2.5 2.5" damping="0.05" />
+                <joint name="ankle_l" pos="0 0 0" axis="0 -1 0" range="-1.39626 1.39626" actuatorfrcrange="-2.5 2.5" damping="0.05" />
                 <geom pos="0 0.00175 0" quat="1 0 0 0" type="mesh" contype="1" conaffinity="1" group="1" density="0" rgba="1 1 1 1" mesh="Tibia" friction="1.0 0.02 0.001" />
                 <body name="tube_3" pos="0.0257439 0.0055 0.00311756" quat="0.707105 0 -0.707108 0">
                   <inertial pos="0 -0.025 0" quat="0.707107 0.707107 0 0" mass="0.005" diaginertia="1.04666e-06 1.04666e-06 1e-08" />
@@ -54,7 +54,7 @@
                   <geom pos="0 0.025 0" quat="1 0 0 0" type="mesh" contype="1" conaffinity="1" group="1" density="0" rgba="0.647059 0.647059 0.647059 1" mesh="Tube" friction="1.0 0.02 0.001" />
                   <body name="foot_1" pos="0 0.025 0" quat="0.682557 0.184702 -0.184702 -0.682559">
                     <inertial pos="-3.09888e-10 1.37245e-11 -0.00858509" quat="0 0.707107 0 0.707107" mass="0.009" diaginertia="3.01706e-06 1.63887e-06 1.53347e-06" />
-                    <joint name="ankle_l" pos="0 0 0" axis="1 0 0" range="-0.314159 0.296706" damping="0.02" frictionloss="0.003" />
+                    <joint name="foot_l" pos="0 0 0" axis="1 0 0" range="-0.314159 0.296706" damping="0.02" frictionloss="0.003" />
                     <geom pos="0 0 -0.007" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Foot" />
                     <geom name="foot_col_l" type="mesh" mesh="Foot" pos="0 0 -0.007" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.1 0.5 0.9 0.4" group="3" />
                     <site name="foot_site_l" pos="0 0 -0.007" size="0.03" rgba="0 0 0 0" />
@@ -65,7 +65,7 @@
           </body>
           <body name="hip_joint_a" pos="-0.0338 0.00075 0.0113" quat="0.707105 0 0.707108 0">
             <inertial pos="0 0.002 -0.00726623" quat="0.5 0.5 0.5 0.5" mass="0.002" diaginertia="3.08091e-07 2.12364e-07 1.01061e-07" />
-            <joint name="hip_pitch_l" pos="0 0 0" axis="0 -1 0" range="-1.39626 1.39626" actuatorfrcrange="-2.5 2.5" damping="0.05" />
+            <joint name="knee_l" pos="0 0 0" axis="0 -1 0" range="-1.39626 1.39626" actuatorfrcrange="-2.5 2.5" damping="0.05" />
             <geom pos="0 0.004 -0.018" quat="1 0 0 0" type="mesh" contype="1" conaffinity="1" group="1" density="0" rgba="1 1 1 1" mesh="Hip_Joint_A" friction="1.0 0.02 0.001" />
             <body name="hip_base" pos="-0.00314735 0.002 -0.016" quat="1.76205e-12 1.32679e-06 -1 -1.32679e-06">
               <inertial pos="-0.00314735 -0.020625 0" quat="0.5 0.5 -0.5 0.5" mass="0.005" diaginertia="1.42852e-06 7.20929e-07 7.20929e-07" />
@@ -101,7 +101,7 @@
                             <geom pos="0.00314735 0.002 -0.002" quat="1 0 0 0" type="mesh" contype="1" conaffinity="1" group="1" density="0" rgba="1 1 1 1" mesh="Hip_Joint_B" friction="1.0 0.02 0.001" />
                             <body name="motor_1" pos="0.00314735 -0.002 0.016" quat="9.38184e-07 0.707108 -9.38187e-07 0.707105">
                               <inertial pos="0.0122451 0.01825 0" quat="0.000517739 0.707107 -0.000517739 0.707107" mass="0.065" diaginertia="2e-5 2e-5 1.5e-5" />
-                              <joint name="hip_pitch_r" pos="0 0 0" axis="0 -1 0" range="-1.39626 1.39626" actuatorfrcrange="-2.5 2.5" damping="0.05" />
+                              <joint name="knee_r" pos="0 0 0" axis="0 -1 0" range="-1.39626 1.39626" actuatorfrcrange="-2.5 2.5" damping="0.05" />
                               <geom pos="0.0125 0.01825 0" quat="1 0 0 0" type="mesh" contype="1" conaffinity="1" group="1" density="0" rgba="0 0 0 1" mesh="Motor" friction="1.0 0.02 0.001" />
                               <body name="upper_leg_a_1" pos="0.03 0.00075 0.0113" quat="0.707105 0.707108 0 0">
                                 <inertial pos="0.00847556 -0.0102485 -0.000126464" quat="-4.11528e-05 0.713492 7.95405e-05 0.700664" mass="0.004" diaginertia="8.68869e-07 5.85197e-07 3.04357e-07" />
@@ -111,7 +111,7 @@
                                   <geom pos="-0.0175 0.0175 -0.0113" quat="1 0 0 0" type="mesh" contype="1" conaffinity="1" group="1" density="0" rgba="0 0 0 1" mesh="Motor" friction="1.0 0.02 0.001" />
                                   <body name="tibia_1" pos="-0.03 -0.00075 -0.0113" quat="1.76163e-12 1.32679e-06 1 1.32679e-06">
                                     <inertial pos="0.0392764 -0.00175006 0.00239463" quat="0.503866 0.496106 0.496104 0.503864" mass="0.005" diaginertia="3.81309e-06 3.71187e-06 1.40255e-07" />
-                                    <joint name="knee_r" pos="0 0 0" axis="0 1 0" range="-1.39626 1.39626" actuatorfrcrange="-2.5 2.5" damping="0.05" />
+                                    <joint name="ankle_r" pos="0 0 0" axis="0 1 0" range="-1.39626 1.39626" actuatorfrcrange="-2.5 2.5" damping="0.05" />
                                     <geom pos="0 -0.00175 0" quat="1 0 0 0" type="mesh" contype="1" conaffinity="1" group="1" density="0" rgba="1 1 1 1" mesh="Tibia" friction="1.0 0.02 0.001" />
                                     <body name="tube" pos="0.0257439 -0.0055 0.00311756" quat="0.707105 0 -0.707108 0">
                                       <inertial pos="0 0.025 0" quat="0.707107 0.707107 0 0" mass="0.005" diaginertia="1.04666e-06 1.04666e-06 1e-08" />
@@ -128,7 +128,7 @@
                                           <geom pos="0 0.025 0" quat="1 0 0 0" type="mesh" contype="1" conaffinity="1" group="1" density="0" rgba="0.647059 0.647059 0.647059 1" mesh="Tube" friction="1.0 0.02 0.001" />
                                           <body name="foot" pos="0 0.025 0" quat="0.682227 0.185914 -0.185915 -0.68223">
                                             <inertial pos="-3.09888e-10 1.37245e-11 -0.00858509" quat="0 0.707107 0 0.707107" mass="0.009" diaginertia="3.01706e-06 1.63887e-06 1.53347e-06" />
-                                            <joint name="ankle_r" pos="0 0 0" axis="1 0 0" range="-0.314159 0.296706" damping="0.02" frictionloss="0.003" />
+                                            <joint name="foot_r" pos="0 0 0" axis="1 0 0" range="-0.314159 0.296706" damping="0.02" frictionloss="0.003" />
                                             <geom pos="0 0 -0.007" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Foot" />
                                             <geom name="foot_col_r" type="mesh" mesh="Foot" pos="0 0 -0.007" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.1 0.5 0.9 0.4" group="3" />
                                             <site name="foot_site_r" pos="0 0 -0.007" size="0.03" rgba="0 0 0 0" />
@@ -186,29 +186,29 @@
   </default>
   <actuator>
     <position name="act_hip_roll_l" joint="hip_roll_l" kp="40.0" kv="10.0" forcerange="-2.5 2.5" />
-    <position name="act_hip_pitch_l" joint="hip_pitch_l" kp="40.0" kv="10.0" forcerange="-2.5 2.5" />
     <position name="act_knee_l" joint="knee_l" kp="40.0" kv="10.0" forcerange="-2.5 2.5" />
+    <position name="act_ankle_l" joint="ankle_l" kp="40.0" kv="10.0" forcerange="-2.5 2.5" />
     <position name="act_hip_roll_r" joint="hip_roll_r" kp="40.0" kv="10.0" forcerange="-2.5 2.5" />
-    <position name="act_hip_pitch_r" joint="hip_pitch_r" kp="40.0" kv="10.0" forcerange="-2.5 2.5" />
     <position name="act_knee_r" joint="knee_r" kp="40.0" kv="10.0" forcerange="-2.5 2.5" />
+    <position name="act_ankle_r" joint="ankle_r" kp="40.0" kv="10.0" forcerange="-2.5 2.5" />
   </actuator>
   <sensor>
     <jointpos name="pos_hip_roll_l" joint="hip_roll_l" />
     <jointvel name="vel_hip_roll_l" joint="hip_roll_l" />
-    <jointpos name="pos_hip_pitch_l" joint="hip_pitch_l" />
-    <jointvel name="vel_hip_pitch_l" joint="hip_pitch_l" />
     <jointpos name="pos_knee_l" joint="knee_l" />
     <jointvel name="vel_knee_l" joint="knee_l" />
-    <jointpos name="pos_hip_roll_r" joint="hip_roll_r" />
-    <jointvel name="vel_hip_roll_r" joint="hip_roll_r" />
-    <jointpos name="pos_hip_pitch_r" joint="hip_pitch_r" />
-    <jointvel name="vel_hip_pitch_r" joint="hip_pitch_r" />
-    <jointpos name="pos_knee_r" joint="knee_r" />
-    <jointvel name="vel_knee_r" joint="knee_r" />
     <jointpos name="pos_ankle_l" joint="ankle_l" />
     <jointvel name="vel_ankle_l" joint="ankle_l" />
+    <jointpos name="pos_hip_roll_r" joint="hip_roll_r" />
+    <jointvel name="vel_hip_roll_r" joint="hip_roll_r" />
+    <jointpos name="pos_knee_r" joint="knee_r" />
+    <jointvel name="vel_knee_r" joint="knee_r" />
     <jointpos name="pos_ankle_r" joint="ankle_r" />
     <jointvel name="vel_ankle_r" joint="ankle_r" />
+    <jointpos name="pos_foot_l" joint="foot_l" />
+    <jointvel name="vel_foot_l" joint="foot_l" />
+    <jointpos name="pos_foot_r" joint="foot_r" />
+    <jointvel name="vel_foot_r" joint="foot_r" />
     <framequat name="torso_quat" objtype="site" objname="imu" />
     <gyro name="torso_gyro" site="imu" />
     <accelerometer name="torso_acc" site="imu" />

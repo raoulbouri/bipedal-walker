@@ -50,7 +50,7 @@ principal inertias satisfying the triangle inequality. Mass matrix at the `stand
 pose is symmetric and positive-definite (via `mj_fullM`).
 
 ### Knee pendulum energy & period
-Isolated single-DOF-equivalent rig (knee_l + ankle_l subtree reparented onto a
+Isolated single-DOF-equivalent rig (ankle_l + foot_l subtree reparented onto a
 fixed anchor at the real `motor` body's stand-pose world transform, no floor, no
 other bodies - avoids spurious contact confounds from a naive full-robot weld).
 Released from 0.3 rad, dissipation zeroed. Effective inertia (via `mj_fullM`)

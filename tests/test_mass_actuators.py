@@ -47,11 +47,11 @@ def test_actuator_count_and_names(request, model_fixture):
     # Test actuator names
     expected_names = {
         "act_hip_roll_l",
-        "act_hip_pitch_l",
         "act_knee_l",
+        "act_ankle_l",
         "act_hip_roll_r",
-        "act_hip_pitch_r",
         "act_knee_r",
+        "act_ankle_r",
     }
 
     actuator_names = set()

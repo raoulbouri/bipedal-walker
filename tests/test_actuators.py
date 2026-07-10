@@ -2,13 +2,13 @@
 Actuator step-response characterization for Phase 4.
 
 This module validates the gravity-loaded step responses of the 6 actuated leg joints
-(hip_roll_l/r, hip_pitch_l/r, knee_l/r) with the updated gains (kp=40.0, kv=10.0).
+(hip_roll_l/r, knee_l/r, ankle_l/r) with the updated gains (kp=40.0, kv=10.0).
 
 **Critical setup note:** The suspended rig (BipedSim with suspended=True) keeps the
 torso fixed but does NOT disable contacts by default. When driving a leg joint in
 this rig, the shin/foot can crash into the floor or other body parts, producing a
 cascade of spurious contacts that completely corrupts the measurement (verified:
-without contact disabling, knee_l driven to 0.5 rad settles at 2.97 rad, outside
+without contact disabling, ankle_l driven to 0.5 rad settles at 2.97 rad, outside
 its own ±1.396 rad mechanical range, because dozens of false contacts fight the
 joint limit).
 
@@ -33,7 +33,7 @@ well-tuned P+D servo under gravity.
 **Step direction conventions:**
   - hip_roll_l (range [-2.269, +0.087]): steps toward NEGATIVE (-0.2, -0.5 rad)
   - hip_roll_r (range [-0.087, +2.269]): steps toward POSITIVE (+0.2, +0.5 rad)
-  - hip_pitch_l/r, knee_l/r (range [-1.396, +1.396]): symmetric, steps POSITIVE (+0.2, +0.5 rad)
+  - knee_l/r, ankle_l/r (range [-1.396, +1.396]): symmetric, steps POSITIVE (+0.2, +0.5 rad)
 """
 
 import sys
@@ -58,11 +58,11 @@ class TestStepResponse:
     # correct qpos array index for a joint.
     JOINTS = [
         ("hip_roll_l", 0, np.array([-0.2, -0.5])),    # Asymmetric range, step negative
-        ("hip_pitch_l", 1, np.array([0.2, 0.5])),     # Symmetric range
-        ("knee_l", 2, np.array([0.2, 0.5])),          # Symmetric range
+        ("knee_l", 1, np.array([0.2, 0.5])),     # Symmetric range
+        ("ankle_l", 2, np.array([0.2, 0.5])),          # Symmetric range
         ("hip_roll_r", 3, np.array([0.2, 0.5])),      # Asymmetric range, step positive
-        ("hip_pitch_r", 4, np.array([0.2, 0.5])),     # Symmetric range
-        ("knee_r", 5, np.array([0.2, 0.5])),          # Symmetric range
+        ("knee_r", 4, np.array([0.2, 0.5])),     # Symmetric range
+        ("ankle_r", 5, np.array([0.2, 0.5])),          # Symmetric range
     ]
 
     # Settling band: absolute 0.02 rad (consistent with SSE tolerance)
@@ -271,15 +271,15 @@ class TestStepResponse:
         }
 
     @pytest.mark.parametrize("model_path_fixture", ["model_path_jetson", "model_path_no_jetson"])
-    def test_repeatability_hip_pitch_l(self, model_path_fixture, request):
+    def test_repeatability_knee_l(self, model_path_fixture, request):
         """
-        Repeatability check: run hip_pitch_l 0.5 rad step twice, verify bitwise-identical trajectories.
+        Repeatability check: run knee_l 0.5 rad step twice, verify bitwise-identical trajectories.
 
         This confirms determinism of the step response, consistent with Phase 1 guarantees.
         """
         model_path = request.getfixturevalue(model_path_fixture)
 
-        actuator_idx = 1  # hip_pitch_l
+        actuator_idx = 1  # knee_l
         step_amp = 0.5
 
         # Run trial 1
@@ -337,11 +337,11 @@ class TestSaturation:
 
     JOINTS = [
         ("hip_roll_l", 0),
-        ("hip_pitch_l", 1),
-        ("knee_l", 2),
+        ("knee_l", 1),
+        ("ankle_l", 2),
         ("hip_roll_r", 3),
-        ("hip_pitch_r", 4),
-        ("knee_r", 5),
+        ("knee_r", 4),
+        ("ankle_r", 5),
     ]
 
     # Simulation parameters for saturation test
@@ -490,11 +490,11 @@ class TestNoLoadSpeed:
 
     JOINTS = [
         ("hip_roll_l", 0),
-        ("hip_pitch_l", 1),
-        ("knee_l", 2),
+        ("knee_l", 1),
+        ("ankle_l", 2),
         ("hip_roll_r", 3),
-        ("hip_pitch_r", 4),
-        ("knee_r", 5),
+        ("knee_r", 4),
+        ("ankle_r", 5),
     ]
 
     # No-load speed threshold
@@ -682,11 +682,11 @@ class TestFrequencyResponse:
 
     JOINTS = [
         ("hip_roll_l", 0),
-        ("hip_pitch_l", 1),
-        ("knee_l", 2),
+        ("knee_l", 1),
+        ("ankle_l", 2),
         ("hip_roll_r", 3),
-        ("hip_pitch_r", 4),
-        ("knee_r", 5),
+        ("knee_r", 4),
+        ("ankle_r", 5),
     ]
 
     # Frequency sweep parameters
@@ -985,11 +985,11 @@ class TestControlRateInteraction:
 
     JOINTS = [
         ("hip_roll_l", 0),
-        ("hip_pitch_l", 1),
-        ("knee_l", 2),
+        ("knee_l", 1),
+        ("ankle_l", 2),
         ("hip_roll_r", 3),
-        ("hip_pitch_r", 4),
-        ("knee_r", 5),
+        ("knee_r", 4),
+        ("ankle_r", 5),
     ]
 
     # Sine command parameters
@@ -1178,7 +1178,7 @@ class TestMultiJointTracking:
     to respect the asymmetric hip_roll ranges:
       - hip_roll_l (range [-2.269, +0.087]): center -0.3 → oscillates [-0.6, 0.0]
       - hip_roll_r (range [-0.087, +2.269]): center +0.3 → oscillates [0.0, 0.6]
-      - hip_pitch_l/r, knee_l/r (range [-1.396, +1.396]): center 0.0 → [-0.3, 0.3]
+      - knee_l/r, ankle_l/r (range [-1.396, +1.396]): center 0.0 → [-0.3, 0.3]
 
     **Validation:** Two checks are applied:
 
@@ -1202,11 +1202,11 @@ class TestMultiJointTracking:
 
     JOINTS = [
         ("hip_roll_l", 0),
-        ("hip_pitch_l", 1),
-        ("knee_l", 2),
+        ("knee_l", 1),
+        ("ankle_l", 2),
         ("hip_roll_r", 3),
-        ("hip_pitch_r", 4),
-        ("knee_r", 5),
+        ("knee_r", 4),
+        ("ankle_r", 5),
     ]
 
     # Sine command parameters: 0.5 Hz, 0.3 rad amplitude, 6 seconds (3 periods)
@@ -1217,11 +1217,11 @@ class TestMultiJointTracking:
     # Per-joint offset centers (to respect asymmetric hip_roll ranges)
     SINE_CENTERS = {
         0: -0.3,  # hip_roll_l: center -0.3 (range [-0.6, 0.0])
-        1:  0.0,  # hip_pitch_l: center 0.0 (range [-0.3, 0.3])
-        2:  0.0,  # knee_l: center 0.0 (range [-0.3, 0.3])
+        1:  0.0,  # knee_l: center 0.0 (range [-0.3, 0.3])
+        2:  0.0,  # ankle_l: center 0.0 (range [-0.3, 0.3])
         3: +0.3,  # hip_roll_r: center +0.3 (range [0.0, 0.6])
-        4:  0.0,  # hip_pitch_r: center 0.0 (range [-0.3, 0.3])
-        5:  0.0,  # knee_r: center 0.0 (range [-0.3, 0.3])
+        4:  0.0,  # knee_r: center 0.0 (range [-0.3, 0.3])
+        5:  0.0,  # ankle_r: center 0.0 (range [-0.3, 0.3])
     }
 
     # Simulation parameters

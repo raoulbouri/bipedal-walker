@@ -14,8 +14,14 @@ FORCE = 2.5
 # is calibrated via mesh AABB corners so BOTH feet have a small (<1mm)
 # interpenetration margin, guaranteeing contact/touch-sensor readings at rest.
 STAND_HEIGHT = 0.2030
-ACTUATED = ["hip_roll_l", "hip_pitch_l", "knee_l",
-            "hip_roll_r", "hip_pitch_r", "knee_r"]
+# Joint names match the motor controller / joint encoder firmware naming
+# (see ~/Work/biped python_st3215 package): hip_roll (hip motor), knee
+# (formerly Onshape's "hip_pitch" mate), ankle (formerly Onshape's "knee"
+# mate - the lowest actuated joint).
+ACTUATED = ["hip_roll_l", "knee_l", "ankle_l",
+            "hip_roll_r", "knee_r", "ankle_r"]
+# FOOT_BODIES keys are body names (from Onshape mesh/part naming), a separate
+# MuJoCo namespace from joint names above - not part of the joint rename.
 FOOT_BODIES = {"foot": "r", "foot_1": "l"}
 BODY_FRICTION = "1.0 0.02 0.001"
 
@@ -140,7 +146,7 @@ def build(OUT, torso_mass, torso_inertia):
             "kp": f"{KP}", "kv": f"{KV}", "forcerange": f"-{FORCE} {FORCE}"})
 
     sen = ET.SubElement(mj, "sensor")
-    for j in ACTUATED + ["ankle_l", "ankle_r"]:
+    for j in ACTUATED + ["foot_l", "foot_r"]:
         ET.SubElement(sen, "jointpos", {"name": f"pos_{j}", "joint": j})
         ET.SubElement(sen, "jointvel", {"name": f"vel_{j}", "joint": j})
     ET.SubElement(sen, "framequat", {"name": "torso_quat", "objtype": "site", "objname": "imu"})
@@ -273,7 +279,7 @@ def add_warp_variant(OUT, torso_mass, torso_inertia):
             "kp": f"{KP}", "kv": f"{KV}", "forcerange": f"-{FORCE} {FORCE}"})
 
     sen = ET.SubElement(mj, "sensor")
-    for j in ACTUATED + ["ankle_l", "ankle_r"]:
+    for j in ACTUATED + ["foot_l", "foot_r"]:
         ET.SubElement(sen, "jointpos", {"name": f"pos_{j}", "joint": j})
         ET.SubElement(sen, "jointvel", {"name": f"vel_{j}", "joint": j})
     ET.SubElement(sen, "framequat", {"name": "torso_quat", "objtype": "site", "objname": "imu"})

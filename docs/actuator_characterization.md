@@ -2,7 +2,7 @@
 
 ## Overview
 
-Phase 4 characterized the 6 simulated position actuators (hip_roll_l/r, hip_pitch_l/r, knee_l/r) against the ST3215 servo's real specifications, to determine whether the simulated closed-loop behavior is a reasonable approximation before controller/RL work begins. All experiments used `BipedSim(suspended=True)` with contacts disabled (`mujoco.mjtDisableBit.mjDSBL_CONTACT`) to isolate pure actuator+gravity dynamics from floor/self-contact artifacts. This isolation was necessary because the suspended rig's torso stays pinned near the floor (its stand-keyframe pose), so undisabled contacts caused a joint to be driven to 2.97 rad, more than double its own ±1.396 rad mechanical range, via a runaway contact cascade before this was diagnosed and fixed.
+Phase 4 characterized the 6 simulated position actuators (hip_roll_l/r, knee_l/r, ankle_l/r) against the ST3215 servo's real specifications, to determine whether the simulated closed-loop behavior is a reasonable approximation before controller/RL work begins. All experiments used `BipedSim(suspended=True)` with contacts disabled (`mujoco.mjtDisableBit.mjDSBL_CONTACT`) to isolate pure actuator+gravity dynamics from floor/self-contact artifacts. This isolation was necessary because the suspended rig's torso stays pinned near the floor (its stand-keyframe pose), so undisabled contacts caused a joint to be driven to 2.97 rad, more than double its own ±1.396 rad mechanical range, via a runaway contact cascade before this was diagnosed and fixed.
 
 ## Gain Retune (kp=40.0, kv=10.0, up from kp=5.0, kv=0.2)
 
@@ -21,16 +21,16 @@ The original kp=5.0, kv=0.2 gains failed two criteria under direct testing:
 |---|---|---|---|---|---|---|
 | hip_roll_l | -0.2 | 0.58 | 0% | 0.56 | 1.00 | 0.011487 |
 | hip_roll_l | -0.5 | 0.58 | 0% | 0.80 | 1.05 | 0.012546 |
-| hip_pitch_l | 0.2 | 0.58 | 0% | 0.58 | 1.00 | 0.000538 |
-| hip_pitch_l | 0.5 | 0.58 | 0% | 0.80 | 1.00 | 0.001293 |
-| knee_l | 0.2 | 0.58 | 0% | 0.58 | 1.00 | 0.000672 |
-| knee_l | 0.5 | 0.58 | 0% | 0.80 | 1.00 | 0.001609 |
+| knee_l | 0.2 | 0.58 | 0% | 0.58 | 1.00 | 0.000538 |
+| knee_l | 0.5 | 0.58 | 0% | 0.80 | 1.00 | 0.001293 |
+| ankle_l | 0.2 | 0.58 | 0% | 0.58 | 1.00 | 0.000672 |
+| ankle_l | 0.5 | 0.58 | 0% | 0.80 | 1.00 | 0.001609 |
 | hip_roll_r | 0.2 | 0.58 | 0% | 0.58 | 1.00 | 0.001190 |
 | hip_roll_r | 0.5 | 0.58 | 0% | 0.80 | 1.00 | 0.003005 |
-| hip_pitch_r | 0.2 | 0.58 | 0% | 0.58 | 1.00 | 0.001068 |
-| hip_pitch_r | 0.5 | 0.58 | 0% | 0.80 | 1.00 | 0.002488 |
-| knee_r | 0.2 | 0.58 | 0% | 0.58 | 1.00 | 0.000665 |
-| knee_r | 0.5 | 0.58 | 0% | 0.80 | 1.00 | 0.001602 |
+| knee_r | 0.2 | 0.58 | 0% | 0.58 | 1.00 | 0.001068 |
+| knee_r | 0.5 | 0.58 | 0% | 0.80 | 1.00 | 0.002488 |
+| ankle_r | 0.2 | 0.58 | 0% | 0.58 | 1.00 | 0.000665 |
+| ankle_r | 0.5 | 0.58 | 0% | 0.80 | 1.00 | 0.001602 |
 
 **Note:** `hip_roll_l` at the 0.5 rad step is allowed a relaxed 1.05s settling limit (measured 0.80s here, well within even the standard 1.0s limit in this particular run — an earlier, independent hand-verification during gain selection found this joint borderline around 1.006-1.218s depending on exact test conditions/control rate, hence the documented relaxed limit; the formally-committed test run shown above comfortably passes at 0.80s). 
 
@@ -47,17 +47,17 @@ All 6 joints, both model variants: max |actuator_force| = exactly 2.500000 N·m 
 | Joint | Peak no-load speed (rad/s) | Ratio to spec | Status |
 |---|---|---|---|
 | hip_roll_l | 7.988 | 1.47x | PASS |
-| hip_pitch_l | 5.269 | 0.97x | PASS |
-| knee_l | 5.259 | 0.97x | PASS |
+| knee_l | 5.269 | 0.97x | PASS |
+| ankle_l | 5.259 | 0.97x | PASS |
 | hip_roll_r | 8.266 | 1.52x | BORDERLINE (accepted) |
-| hip_pitch_r | 5.257 | 0.96x | PASS |
-| knee_r | 5.259 | 0.96x | PASS |
+| knee_r | 5.257 | 0.96x | PASS |
+| ankle_r | 5.259 | 0.96x | PASS |
 
 **Note:** `hip_roll_r` at 1.52x sits marginally above the 1.5x threshold (8.175 rad/s) at 8.266 rad/s, inside an accepted borderline band of [8.175, 8.5] rad/s specifically for the two hip_roll joints, which have an asymmetric range and different geometry/gravity-moment-arm from the other 4 joints. This is documented as an accepted, small, physically-explained margin, not silently passed or hidden.
 
 ## Frequency Response and -3dB Bandwidth
 
-Sine-tracking sweep at [0.2, 0.5, 1.0, 2.0, 3.0, 5.0, 7.0, 10.0] Hz, 0.05 rad amplitude, all 6 joints (results nearly identical across joints by design symmetry). Representative table (hip_pitch_l, model_path_jetson):
+Sine-tracking sweep at [0.2, 0.5, 1.0, 2.0, 3.0, 5.0, 7.0, 10.0] Hz, 0.05 rad amplitude, all 6 joints (results nearly identical across joints by design symmetry). Representative table (knee_l, model_path_jetson):
 
 | Frequency (Hz) | Amplitude ratio | Phase lag (deg) |
 |---|---|---|
@@ -90,11 +90,11 @@ Measured (model_path_jetson variant):
 | Joint | Measured RMS (rad) | Predicted RMS (rad) | % difference |
 |---|---|---|---|
 | hip_roll_l | 0.134868 | 0.132181 | +2.03% |
-| hip_pitch_l | 0.132043 | 0.132095 | -0.04% |
-| knee_l | 0.131828 | 0.131829 | -0.00% |
+| knee_l | 0.132043 | 0.132095 | -0.04% |
+| ankle_l | 0.131828 | 0.131829 | -0.00% |
 | hip_roll_r | 0.131508 | 0.131853 | -0.26% |
-| hip_pitch_r | 0.131571 | 0.131582 | -0.01% |
-| knee_r | 0.131898 | 0.131897 | +0.00% |
+| knee_r | 0.131571 | 0.131582 | -0.01% |
+| ankle_r | 0.131898 | 0.131897 | +0.00% |
 
 All within the 25% cross-validation bound (max deviation 2.03%), confirming no unexpected cross-coupling effects from simultaneous actuation.
 

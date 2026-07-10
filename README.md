@@ -78,11 +78,11 @@ uv run python scripts/postprocess.py    # Stage 2
 
 ### Actuated Joints (6)
 - `hip_roll_l/r` (2)
-- `hip_pitch_l/r` (2)
 - `knee_l/r` (2)
+- `ankle_l/r` (2)
 
 ### Passive Joints (2)
-- `ankle_l/r` — passive, hardstop-limited based on physical measurements
+- `foot_l/r` — passive, hardstop-limited based on physical measurements
 
 ### Sensors (24 total)
 - Joint position/velocity for all 8 hinge joints
