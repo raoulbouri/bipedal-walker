@@ -6,7 +6,8 @@ on mjlab (MuJoCo Warp GPU backend) with RSL-RL training via Google Colab.
 Phase 6 structure:
 - Phase 6.A (done): entity.py — Robot EntityCfg with biped_warp.xml
 - Phase 6.B (done): observations.py — Actor/critic observation groups
-- Phase 6.C (next): commands.py — Velocity command + domain randomization
+- Phase 6.C (done): commands.py, init_noise.py, domain_randomization.py —
+  velocity command sampler, init-state noise, domain randomization
 - Phase 6.D: rewards.py — Reward + termination functions (stubs)
 - Phase 6.E: config.py — Full ManagerBasedRlEnvCfg assembly
 
@@ -24,6 +25,9 @@ from .observations import (
     CRITIC_TERM_NAMES,
     ACTOR_SENSOR_WHITELIST,
 )
+from .commands import CommandRangeCfg, sample_command
+from .init_noise import InitNoiseCfg, sample_init_state, apply_init_state
+from .domain_randomization import DomainRandomizationCfg, DomainRandomizer
 
 __all__ = [
     "BipedEntityCfg",
@@ -36,4 +40,11 @@ __all__ = [
     "ACTOR_TERM_NAMES",
     "CRITIC_TERM_NAMES",
     "ACTOR_SENSOR_WHITELIST",
+    "CommandRangeCfg",
+    "sample_command",
+    "InitNoiseCfg",
+    "sample_init_state",
+    "apply_init_state",
+    "DomainRandomizationCfg",
+    "DomainRandomizer",
 ]
