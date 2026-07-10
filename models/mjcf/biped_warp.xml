@@ -1,0 +1,255 @@
+<mujoco model="assembly_simple">
+  <compiler angle="radian" meshdir="../../meshes/stl/" />
+  <asset>
+    <mesh name="_" content_type="model/stl" file="_.stl" />
+    <mesh name="__1" content_type="model/stl" file="__1.stl" />
+    <mesh name="__2" content_type="model/stl" file="__2.stl" />
+    <mesh name="Foot" content_type="model/stl" file="Foot.stl" />
+    <mesh name="Hip_Base" content_type="model/stl" file="Hip_Base.stl" />
+    <mesh name="Hip_Joint_A" content_type="model/stl" file="Hip_Joint_A.stl" />
+    <mesh name="Hip_Joint_B" content_type="model/stl" file="Hip_Joint_B.stl" />
+    <mesh name="Motor" content_type="model/stl" file="Motor.stl" />
+    <mesh name="Part_1" content_type="model/stl" file="Part_1.stl" />
+    <mesh name="Tibia" content_type="model/stl" file="Tibia.stl" />
+    <mesh name="Tube" content_type="model/stl" file="Tube.stl" />
+    <mesh name="Upper_Leg_A" content_type="model/stl" file="Upper_Leg_A.stl" />
+    <mesh name="Upper_Leg_B" content_type="model/stl" file="Upper_Leg_B.stl" />
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="512" />
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.2 0.3 0.4" rgb2="0.1 0.15 0.2" width="512" height="512" />
+    <material name="grid" texture="grid" texrepeat="6 6" reflectance="0.1" />
+  </asset>
+  <worldbody>
+    <body name="root">
+      <freejoint name="floating_base" />
+      <body name="upper_leg_a" pos="0.082375 0.00290272 -0.0679125" quat="0.707105 0 0.707108 0">
+        <inertial pos="0.00531306 2.37861e-05 0.00337354" quat="-4.11528e-05 0.713492 7.95405e-05 0.700664" mass="0.004" diaginertia="8.68869e-07 5.85197e-07 3.04357e-07" />
+        <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Upper_Leg_A" />
+        <body name="motor_3" pos="-0.0031625 0.0102723 0.0025" quat="0.707105 0.707108 0 0">
+          <inertial pos="-0.0215549 -0.0175 0.0113" quat="0.000517739 0.707107 -0.000517739 0.707107" mass="0.065" diaginertia="2e-5 2e-5 1.5e-5" />
+          <geom pos="-0.0213 -0.0175 0.0113" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 0 1" mesh="Motor" />
+          <body name="upper_leg_b_1" pos="-0.0038 -0.035 0.0226" quat="9.38184e-07 -9.38187e-07 0.707108 -0.707105">
+            <inertial pos="-0.00664884 0.0102571 0.00339588" quat="0.000805323 0.710288 -0.000732258 0.70391" mass="0.004" diaginertia="8.06476e-07 5.15095e-07 3.12316e-07" />
+            <geom pos="-0.0068375 0.0102277 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Upper_Leg_B" />
+            <body name="motor" pos="-0.01 0 0.0025" quat="0.707105 0.707108 0 0">
+              <inertial pos="-0.0215549 -0.0175 -0.0113" quat="0.000517739 0.707107 -0.000517739 0.707107" mass="0.065" diaginertia="2e-5 2e-5 1.5e-5" />
+              <geom pos="-0.0213 -0.0175 -0.0113" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 0 1" mesh="Motor" />
+              <body name="tibia_2" pos="-0.0338 -0.03575 -0.0113" quat="1.32679e-06 0 0 -1">
+                <inertial pos="0.0392764 0.00174994 0.00239463" quat="0.503866 0.496106 0.496104 0.503864" mass="0.005" diaginertia="3.81309e-06 3.71187e-06 1.40255e-07" />
+                <joint name="knee_l" pos="0 0 0" axis="0 -1 0" range="-1.39626 1.39626" actuatorfrcrange="-2.5 2.5" damping="0.05" />
+                <geom pos="0 0.00175 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Tibia" />
+                <body name="tube_3" pos="0.0257439 0.0055 0.00311756" quat="0.707105 0 -0.707108 0">
+                  <inertial pos="0 -0.025 0" quat="0.707107 0.707107 0 0" mass="0.005" diaginertia="1.04666e-06 1.04666e-06 1e-08" />
+                  <geom pos="0 -0.025 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.647059 0.647059 0.647059 1" mesh="Tube" />
+                  <body name="tibia_3" pos="0 -0.05 0" quat="0.707105 0 0.707108 0">
+                    <inertial pos="0.0135326 0.00374994 -0.000722925" quat="0.503866 0.496106 0.496104 0.503864" mass="0.005" diaginertia="3.81309e-06 3.71187e-06 1.40255e-07" />
+                    <geom pos="-0.0257439 0.00375 -0.00311756" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Tibia" />
+                    <geom type="capsule" size="0.008 0.10" pos="-0.0257439 0.00375 -0.00311756" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                  </body>
+                  <geom type="capsule" size="0.008 0.10" pos="0 -0.025 0" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                </body>
+                <body name="tube_5" pos="0.0508971 0.0055 0.00617156" quat="9.38184e-07 -0.707108 9.38187e-07 0.707105">
+                  <inertial pos="0 0.025 0" quat="0.707107 0.707107 0 0" mass="0.005" diaginertia="1.04666e-06 1.04666e-06 1e-08" />
+                  <geom pos="0 0.025 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.647059 0.647059 0.647059 1" mesh="Tube" />
+                  <geom type="capsule" size="0.008 0.10" pos="0 0.025 0" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                </body>
+                <body name="tube_4" pos="0.0761419 0.0055 -0.00113333" quat="9.38184e-07 -0.707108 9.38187e-07 0.707105">
+                  <inertial pos="0 0.025 0" quat="0.707107 0.707107 0 0" mass="0.005" diaginertia="1.04666e-06 1.04666e-06 1e-08" />
+                  <geom pos="0 0.025 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.647059 0.647059 0.647059 1" mesh="Tube" />
+                  <body name="foot_1" pos="0 0.025 0" quat="0.682557 0.184702 -0.184702 -0.682559">
+                    <inertial pos="-3.09888e-10 1.37245e-11 -0.00858509" quat="0 0.707107 0 0.707107" mass="0.009" diaginertia="3.01706e-06 1.63887e-06 1.53347e-06" />
+                    <joint name="ankle_l" pos="0 0 0" axis="1 0 0" range="-0.314159 0.296706" damping="0.02" frictionloss="0.003" />
+                    <geom pos="0 0 -0.007" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Foot" />
+                    <geom name="foot_col_l" type="mesh" mesh="Foot" pos="0 0 -0.007" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.1 0.5 0.9 0.4" group="3" />
+                    <site name="foot_site_l" pos="0 0 -0.007" size="0.03" rgba="0 0 0 0" />
+                  </body>
+                  <geom type="capsule" size="0.008 0.10" pos="0 0.025 0" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                </body>
+                <geom type="capsule" size="0.008 0.10" pos="0 0.00175 0" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+              </body>
+              <geom type="capsule" size="0.015 0.05" pos="-0.0213 -0.0175 -0.0113" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+            </body>
+            <geom type="capsule" size="0.012 0.08" pos="-0.0068375 0.0102277 0" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+          </body>
+          <body name="hip_joint_a" pos="-0.0338 0.00075 0.0113" quat="0.707105 0 0.707108 0">
+            <inertial pos="0 0.002 -0.00726623" quat="0.5 0.5 0.5 0.5" mass="0.002" diaginertia="3.08091e-07 2.12364e-07 1.01061e-07" />
+            <joint name="hip_pitch_l" pos="0 0 0" axis="0 -1 0" range="-1.39626 1.39626" actuatorfrcrange="-2.5 2.5" damping="0.05" />
+            <geom pos="0 0.004 -0.018" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Hip_Joint_A" />
+            <body name="hip_base" pos="-0.00314735 0.002 -0.016" quat="1.76205e-12 1.32679e-06 -1 -1.32679e-06">
+              <inertial pos="-0.00314735 -0.020625 0" quat="0.5 0.5 -0.5 0.5" mass="0.005" diaginertia="1.42852e-06 7.20929e-07 7.20929e-07" />
+              <geom pos="-0.00314735 -0.020625 -0.002" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Hip_Base" />
+              <body name="hip_joint_b_1" pos="0.0174777 -0.0174777 0" quat="0.707105 0 0 -0.707108">
+                <inertial pos="0.00317203 0 0.00893469" quat="0.500884 0.499114 0.499114 0.500884" mass="0.002" diaginertia="2.69024e-07 1.72562e-07 1.01796e-07" />
+                <geom pos="0.00314735 0.002 -0.002" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Hip_Joint_B" />
+                <body name="motor_4" pos="0.00314735 -0.002 0.016" quat="1.32679e-06 -1 0 0">
+                  <inertial pos="0.0122451 0.01825 0" quat="0.000517739 0.707107 -0.000517739 0.707107" mass="0.065" diaginertia="2e-5 2e-5 1.5e-5" />
+                  <joint name="hip_roll_l" pos="0 0 0" axis="0 -1 0" range="-2.26893 0.0872665" actuatorfrcrange="-2.5 2.5" damping="0.05" />
+                  <geom pos="0.0125 0.01825 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 0 1" mesh="Motor" />
+                  <body name="composite_part_1__1_" pos="0.03 0.00075 0.0113" quat="1.76038e-12 1.32679e-06 1 1.32679e-06">
+                    <inertial pos="0 0.0190036 0" quat="0.5 0.5 0.5 0.5" mass="0.279" diaginertia="6e-4 5e-4 4e-4" />
+                    <geom pos="-0.037 0.016 0.01025" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.91 0.91 0.91 1" mesh="_" />
+                    <geom pos="-0.037 0.016 0.01025" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.91 0.91 0.91 1" mesh="__1" />
+                    <geom pos="-0.037 0.016 0.01025" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.91 0.91 0.91 1" mesh="__2" />
+                    <body name="part_1" pos="-0.037 0.016 0.04625">
+                      <inertial pos="0 0 0.0143964" quat="0 0.707107 0 0.707107" mass="0.005" diaginertia="1.59469e-05 1.11419e-05 8.07049e-06" />
+                      <geom pos="0 0 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Part_1" />
+                      <geom type="capsule" size="0.008 0.06" pos="0 0 0" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                    </body>
+                    <body name="motor_5" pos="-0.074 0 0.0205">
+                      <inertial pos="-0.0177549 0.0175 -0.0113" quat="0.000517739 0.707107 -0.000517739 0.707107" mass="0.065" diaginertia="2e-5 2e-5 1.5e-5" />
+                      <geom pos="-0.0175 0.0175 -0.0113" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 0 1" mesh="Motor" />
+                      <body name="hip_joint_a_2" pos="-0.03 -0.00075 -0.0113" quat="1 0 0 0">
+                        <inertial pos="0 -0.002 -0.00726623" quat="0.5 0.5 0.5 0.5" mass="0.002" diaginertia="3.08091e-07 2.12364e-07 1.01061e-07" />
+                        <joint name="hip_roll_r" pos="0 0 0" axis="0 1 0" range="-0.0872665 2.26893" actuatorfrcrange="-2.5 2.5" damping="0.05" />
+                        <geom pos="0 0 -0.018" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Hip_Joint_A" />
+                        <body name="hip_base_1" pos="-0.00314735 -0.002 -0.016" quat="1.76036e-12 1.32679e-06 -1 -1.32679e-06">
+                          <inertial pos="-0.00314735 0.020625 0" quat="0.5 0.5 -0.5 0.5" mass="0.005" diaginertia="1.42852e-06 7.20929e-07 7.20929e-07" />
+                          <geom pos="-0.00314735 0.020625 -0.002" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Hip_Base" />
+                          <body name="hip_joint_b_2" pos="0.0174777 0.0237723 0" quat="0.707105 0 0 -0.707108">
+                            <inertial pos="0.00317203 0 0.00893469" quat="0.500884 0.499114 0.499114 0.500884" mass="0.002" diaginertia="2.69024e-07 1.72562e-07 1.01796e-07" />
+                            <geom pos="0.00314735 0.002 -0.002" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Hip_Joint_B" />
+                            <body name="motor_1" pos="0.00314735 -0.002 0.016" quat="9.38184e-07 0.707108 -9.38187e-07 0.707105">
+                              <inertial pos="0.0122451 0.01825 0" quat="0.000517739 0.707107 -0.000517739 0.707107" mass="0.065" diaginertia="2e-5 2e-5 1.5e-5" />
+                              <joint name="hip_pitch_r" pos="0 0 0" axis="0 -1 0" range="-1.39626 1.39626" actuatorfrcrange="-2.5 2.5" damping="0.05" />
+                              <geom pos="0.0125 0.01825 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 0 1" mesh="Motor" />
+                              <body name="upper_leg_a_1" pos="0.03 0.00075 0.0113" quat="0.707105 0.707108 0 0">
+                                <inertial pos="0.00847556 -0.0102485 -0.000126464" quat="-4.11528e-05 0.713492 7.95405e-05 0.700664" mass="0.004" diaginertia="8.68869e-07 5.85197e-07 3.04357e-07" />
+                                <geom pos="0.0031625 -0.0102723 -0.0035" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Upper_Leg_A" />
+                                <body name="motor_2" pos="0.01 -0.0205 -0.0025" quat="9.38184e-07 -9.38187e-07 0.707108 -0.707105">
+                                  <inertial pos="-0.0177549 0.0175 -0.0113" quat="0.000517739 0.707107 -0.000517739 0.707107" mass="0.065" diaginertia="2e-5 2e-5 1.5e-5" />
+                                  <geom pos="-0.0175 0.0175 -0.0113" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 0 1" mesh="Motor" />
+                                  <body name="tibia_1" pos="-0.03 -0.00075 -0.0113" quat="1.76163e-12 1.32679e-06 1 1.32679e-06">
+                                    <inertial pos="0.0392764 -0.00175006 0.00239463" quat="0.503866 0.496106 0.496104 0.503864" mass="0.005" diaginertia="3.81309e-06 3.71187e-06 1.40255e-07" />
+                                    <joint name="knee_r" pos="0 0 0" axis="0 1 0" range="-1.39626 1.39626" actuatorfrcrange="-2.5 2.5" damping="0.05" />
+                                    <geom pos="0 -0.00175 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Tibia" />
+                                    <body name="tube" pos="0.0257439 -0.0055 0.00311756" quat="0.707105 0 -0.707108 0">
+                                      <inertial pos="0 0.025 0" quat="0.707107 0.707107 0 0" mass="0.005" diaginertia="1.04666e-06 1.04666e-06 1e-08" />
+                                      <geom pos="0 0.025 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.647059 0.647059 0.647059 1" mesh="Tube" />
+                                      <body name="tibia" pos="0 0.05 0" quat="0.707105 0 0.707108 0">
+                                        <inertial pos="0.0135326 -0.00375006 -0.000722925" quat="0.503866 0.496106 0.496104 0.503864" mass="0.005" diaginertia="3.81309e-06 3.71187e-06 1.40255e-07" />
+                                        <geom pos="-0.0257439 -0.00375 -0.00311756" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Tibia" />
+                                        <body name="tube_1" pos="0.0251533 0 0.003054" quat="9.38184e-07 0.707108 9.38187e-07 -0.707105">
+                                          <inertial pos="0 0.025 0" quat="0.707107 0.707107 0 0" mass="0.005" diaginertia="1.04666e-06 1.04666e-06 1e-08" />
+                                          <geom pos="0 0.025 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.647059 0.647059 0.647059 1" mesh="Tube" />
+                                          <geom type="capsule" size="0.008 0.10" pos="0 0.025 0" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                                        </body>
+                                        <body name="tube_2" pos="0.0503981 0 -0.00425089" quat="9.38184e-07 -0.707108 9.38187e-07 0.707105">
+                                          <inertial pos="0 0.025 0" quat="0.707107 0.707107 0 0" mass="0.005" diaginertia="1.04666e-06 1.04666e-06 1e-08" />
+                                          <geom pos="0 0.025 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.647059 0.647059 0.647059 1" mesh="Tube" />
+                                          <body name="foot" pos="0 0.025 0" quat="0.682227 0.185914 -0.185915 -0.68223">
+                                            <inertial pos="-3.09888e-10 1.37245e-11 -0.00858509" quat="0 0.707107 0 0.707107" mass="0.009" diaginertia="3.01706e-06 1.63887e-06 1.53347e-06" />
+                                            <joint name="ankle_r" pos="0 0 0" axis="1 0 0" range="-0.314159 0.296706" damping="0.02" frictionloss="0.003" />
+                                            <geom pos="0 0 -0.007" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Foot" />
+                                            <geom name="foot_col_r" type="mesh" mesh="Foot" pos="0 0 -0.007" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.1 0.5 0.9 0.4" group="3" />
+                                            <site name="foot_site_r" pos="0 0 -0.007" size="0.03" rgba="0 0 0 0" />
+                                          </body>
+                                          <geom type="capsule" size="0.008 0.10" pos="0 0.025 0" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                                        </body>
+                                        <geom type="capsule" size="0.008 0.10" pos="-0.0257439 -0.00375 -0.00311756" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                                      </body>
+                                      <geom type="capsule" size="0.008 0.10" pos="0 0.025 0" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                                    </body>
+                                    <geom type="capsule" size="0.008 0.10" pos="0 -0.00175 0" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                                  </body>
+                                  <geom type="capsule" size="0.015 0.05" pos="-0.0175 0.0175 -0.0113" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                                </body>
+                                <geom type="capsule" size="0.012 0.08" pos="0.0031625 -0.0102723 -0.0035" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                              </body>
+                              <body name="upper_leg_b" pos="0.0338 0.03575 0.0113" quat="9.38184e-07 9.38187e-07 -0.707108 -0.707105">
+                                <inertial pos="-0.00664884 -0.0102429 0.00339588" quat="0.000805323 0.710288 -0.000732258 0.70391" mass="0.004" diaginertia="8.06476e-07 5.15095e-07 3.12316e-07" />
+                                <geom pos="-0.0068375 -0.0102723 0" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Upper_Leg_B" />
+                                <geom type="capsule" size="0.012 0.08" pos="-0.0068375 -0.0102723 0" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                              </body>
+                              <geom type="capsule" size="0.015 0.05" pos="0.0125 0.01825 0" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                            </body>
+                            <geom type="sphere" size="0.01" pos="0.00314735 0.002 -0.002" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                          </body>
+                          <body name="hip_joint_a_3" pos="0 0.04125 0" quat="1.76036e-12 -1.32679e-06 1 -1.32679e-06">
+                            <inertial pos="0.00314735 0 0.00873377" quat="0.5 0.5 0.5 0.5" mass="0.002" diaginertia="3.08091e-07 2.12364e-07 1.01061e-07" />
+                            <geom pos="0.00314735 0.002 -0.002" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Hip_Joint_A" />
+                            <geom type="sphere" size="0.01" pos="0.00314735 0.002 -0.002" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                          </body>
+                          <body name="hip_joint_b_3" pos="-0.0237723 0.011183 0" quat="0.707105 0 0 0.707108">
+                            <inertial pos="0.00946672 0 0.00893469" quat="0.500884 0.499114 0.499114 0.500884" mass="0.002" diaginertia="2.69024e-07 1.72562e-07 1.01796e-07" />
+                            <geom pos="0.00944204 0.002 -0.002" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Hip_Joint_B" />
+                            <geom type="sphere" size="0.01" pos="0.00944204 0.002 -0.002" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                          </body>
+                          <geom type="box" size="0.02 0.05 0.02" pos="-0.00314735 0.020625 -0.002" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                        </body>
+                        <geom type="sphere" size="0.01" pos="0 0 -0.018" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                      </body>
+                      <geom type="capsule" size="0.015 0.05" pos="-0.0175 0.0175 -0.0113" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                    </body>
+                    <site name="imu" pos="0 0 0" size="0.005" rgba="1 0 0 0" />
+                  </body>
+                  <geom type="capsule" size="0.015 0.05" pos="0.0125 0.01825 0" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+                </body>
+                <geom type="sphere" size="0.01" pos="0.00314735 0.002 -0.002" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+              </body>
+              <body name="hip_joint_a_1" pos="0 -0.04125 0" quat="1.75872e-12 1.32679e-06 -1 -1.32679e-06">
+                <inertial pos="0.00314735 0 0.00873377" quat="0.5 0.5 0.5 0.5" mass="0.002" diaginertia="3.08091e-07 2.12364e-07 1.01061e-07" />
+                <geom pos="0.00314735 0.002 -0.002" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Hip_Joint_A" />
+                <geom type="sphere" size="0.01" pos="0.00314735 0.002 -0.002" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+              </body>
+              <body name="hip_joint_b" pos="-0.0237723 -0.030067 0" quat="0.707105 0 0 0.707108">
+                <inertial pos="0.00946672 0 0.00893469" quat="0.500884 0.499114 0.499114 0.500884" mass="0.002" diaginertia="2.69024e-07 1.72562e-07 1.01796e-07" />
+                <geom pos="0.00944204 0.002 -0.002" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1" mesh="Hip_Joint_B" />
+                <geom type="sphere" size="0.01" pos="0.00944204 0.002 -0.002" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+              </body>
+              <geom type="box" size="0.02 0.05 0.02" pos="-0.00314735 -0.020625 -0.002" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+            </body>
+            <geom type="sphere" size="0.01" pos="0 0.004 -0.018" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+          </body>
+          <geom type="capsule" size="0.015 0.05" pos="-0.0213 -0.0175 0.0113" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+        </body>
+        <geom type="capsule" size="0.012 0.08" pos="0 0 0" quat="1 0 0 0" contype="1" conaffinity="1" friction="1.0 0.02 0.001" rgba="0.5 0.5 0.5 0.1" group="2" />
+      </body>
+    </body>
+    <light pos="0 0 2" dir="0 0 -1" directional="true" />
+    <geom name="floor" type="plane" size="0 0 0.05" material="grid" contype="1" conaffinity="1" friction="1.0 0.02 0.001" />
+  </worldbody>
+  <option timestep="0.002" integrator="implicit" />
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0" />
+    <global offwidth="1280" offheight="960" />
+  </visual>
+  <default>
+    <joint armature="0.01" frictionloss="0.002" />
+  </default>
+  <actuator>
+    <position name="act_hip_roll_l" joint="hip_roll_l" kp="40.0" kv="10.0" forcerange="-2.5 2.5" />
+    <position name="act_hip_pitch_l" joint="hip_pitch_l" kp="40.0" kv="10.0" forcerange="-2.5 2.5" />
+    <position name="act_knee_l" joint="knee_l" kp="40.0" kv="10.0" forcerange="-2.5 2.5" />
+    <position name="act_hip_roll_r" joint="hip_roll_r" kp="40.0" kv="10.0" forcerange="-2.5 2.5" />
+    <position name="act_hip_pitch_r" joint="hip_pitch_r" kp="40.0" kv="10.0" forcerange="-2.5 2.5" />
+    <position name="act_knee_r" joint="knee_r" kp="40.0" kv="10.0" forcerange="-2.5 2.5" />
+  </actuator>
+  <sensor>
+    <jointpos name="pos_hip_roll_l" joint="hip_roll_l" />
+    <jointvel name="vel_hip_roll_l" joint="hip_roll_l" />
+    <jointpos name="pos_hip_pitch_l" joint="hip_pitch_l" />
+    <jointvel name="vel_hip_pitch_l" joint="hip_pitch_l" />
+    <jointpos name="pos_knee_l" joint="knee_l" />
+    <jointvel name="vel_knee_l" joint="knee_l" />
+    <jointpos name="pos_hip_roll_r" joint="hip_roll_r" />
+    <jointvel name="vel_hip_roll_r" joint="hip_roll_r" />
+    <jointpos name="pos_hip_pitch_r" joint="hip_pitch_r" />
+    <jointvel name="vel_hip_pitch_r" joint="hip_pitch_r" />
+    <jointpos name="pos_knee_r" joint="knee_r" />
+    <jointvel name="vel_knee_r" joint="knee_r" />
+    <jointpos name="pos_ankle_l" joint="ankle_l" />
+    <jointvel name="vel_ankle_l" joint="ankle_l" />
+    <jointpos name="pos_ankle_r" joint="ankle_r" />
+    <jointvel name="vel_ankle_r" joint="ankle_r" />
+    <framequat name="torso_quat" objtype="site" objname="imu" />
+    <gyro name="torso_gyro" site="imu" />
+    <accelerometer name="torso_acc" site="imu" />
+    <framepos name="torso_pos" objtype="site" objname="imu" />
+    <framelinvel name="torso_linvel" objtype="site" objname="imu" />
+    <frameangvel name="torso_angvel" objtype="site" objname="imu" />
+    <touch name="touch_l" site="foot_site_l" />
+    <touch name="touch_r" site="foot_site_r" />
+  </sensor>
+  <keyframe>
+    <key name="stand" qpos="0 0 0.203 1 0 0 0 0 0 0 0 0 0 0 0" ctrl="0 0 0 0 0 0" />
+  </keyframe>
+</mujoco>

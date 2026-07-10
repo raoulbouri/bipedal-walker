@@ -36,6 +36,19 @@ VARIANTS = [
     ("models/mjcf/biped_no_jetson.xml",  TORSO_BASE,          "2.1e-4 1.8e-4 1.4e-4"),
 ]
 
+# Collision proxy specs for Warp variant (mesh name → capsule/box/sphere params)
+COLLISION_PROXIES = {
+    "Motor": {"type": "capsule", "size": "0.015 0.05"},
+    "Upper_Leg_A": {"type": "capsule", "size": "0.012 0.08"},
+    "Upper_Leg_B": {"type": "capsule", "size": "0.012 0.08"},
+    "Tibia": {"type": "capsule", "size": "0.008 0.10"},
+    "Tube": {"type": "capsule", "size": "0.008 0.10"},
+    "Hip_Base": {"type": "box", "size": "0.02 0.05 0.02"},
+    "Hip_Joint_A": {"type": "sphere", "size": "0.01"},
+    "Hip_Joint_B": {"type": "sphere", "size": "0.01"},
+    "Part_1": {"type": "capsule", "size": "0.008 0.06"},
+}
+
 
 def build(OUT, torso_mass, torso_inertia):
     tree = ET.parse(RAW)
@@ -149,5 +162,141 @@ def build(OUT, torso_mass, torso_inertia):
     print(f"wrote {OUT}  (torso {torso_mass:.3f} kg)")
 
 
+def add_warp_variant(OUT, torso_mass, torso_inertia):
+    """Build biped_warp.xml: implicit integrator + primitive collision geoms."""
+    tree = ET.parse(RAW)
+    mj = tree.getroot()
+
+    compiler = mj.find("compiler")
+    if compiler is not None:
+        compiler.set("meshdir", "../../meshes/stl/")
+
+    def find_body(name):
+        for b in mj.iter("body"):
+            if b.get("name") == name:
+                return b
+        return None
+
+    find_body("root").insert(0, ET.Element("freejoint", {"name": "floating_base"}))
+
+    def set_mass(body, new_mass, inertia=None):
+        ine = body.find("inertial")
+        if ine is None:
+            return
+        m_old = float(ine.get("mass"))
+        ine.set("mass", f"{new_mass:.6g}")
+        if inertia is not None:
+            ine.set("diaginertia", inertia)
+        elif m_old > 1e-4:
+            di = [float(x) * (new_mass / m_old) for x in ine.get("diaginertia").split()]
+            ine.set("diaginertia", " ".join(f"{x:.6g}" for x in di))
+
+    pelvis = find_body(TORSO_BODY)
+    set_mass(pelvis, torso_mass, torso_inertia)
+    for b in mj.iter("body"):
+        if b.get("name") == TORSO_BODY:
+            continue
+        for mesh in [g.get("mesh") for g in b.findall("geom") if g.get("mesh")]:
+            if mesh in MASS_BY_MESH:
+                set_mass(b, MASS_BY_MESH[mesh], NOMINAL_INERTIA.get(mesh))
+                break
+
+    # Add foot collision geoms (same as CPU variant)
+    for body, side in FOOT_BODIES.items():
+        b = find_body(body)
+        vis = next(g for g in b.findall("geom") if g.get("mesh") == "Foot")
+        b.append(ET.Element("geom", {
+            "name": f"foot_col_{side}", "type": "mesh", "mesh": "Foot",
+            "pos": vis.get("pos", "0 0 0"), "quat": vis.get("quat", "1 0 0 0"),
+            "contype": "1", "conaffinity": "1",
+            "friction": "1.0 0.02 0.001", "rgba": "0.1 0.5 0.9 0.4", "group": "3"}))
+        b.append(ET.Element("site", {
+            "name": f"foot_site_{side}", "pos": vis.get("pos", "0 0 0"),
+            "size": "0.03", "rgba": "0 0 0 0"}))
+
+    # Add primitive collision geoms for non-foot bodies (Warp variant only)
+    skip_bodies = set(FOOT_BODIES.keys())
+    for b in mj.iter("body"):
+        if b.get("name") in skip_bodies:
+            continue
+        # Find visual mesh geoms and add collision proxies
+        for g in b.findall("geom"):
+            if g.get("group") == "1" and g.get("type") == "mesh":
+                mesh_name = g.get("mesh")
+                # Keep the visual mesh as-is, don't add collision to it
+                # (it remains contype=0, conaffinity=0)
+
+                # Add a primitive collision geom if we have a proxy for this mesh
+                if mesh_name in COLLISION_PROXIES:
+                    proxy = COLLISION_PROXIES[mesh_name]
+                    geom_dict = {
+                        "type": proxy["type"],
+                        "size": proxy["size"],
+                        "pos": g.get("pos", "0 0 0"),
+                        "quat": g.get("quat", "1 0 0 0"),
+                        "contype": "1",
+                        "conaffinity": "1",
+                        "friction": BODY_FRICTION,
+                        "rgba": "0.5 0.5 0.5 0.1",
+                        "group": "2"
+                    }
+                    # For non-capsule/non-box types, adjust size format
+                    b.append(ET.Element("geom", geom_dict))
+
+    pelvis.append(ET.Element("site", {"name": "imu", "pos": "0 0 0", "size": "0.005",
+                                      "rgba": "1 0 0 0"}))
+    opt = ET.SubElement(mj, "option")
+    opt.set("timestep", "0.002")
+    opt.set("integrator", "implicit")  # KEY DIFFERENCE: implicit instead of implicitfast
+    vis = ET.SubElement(mj, "visual")
+    ET.SubElement(vis, "headlight", {"diffuse": "0.6 0.6 0.6", "ambient": "0.3 0.3 0.3",
+                                     "specular": "0 0 0"})
+    ET.SubElement(vis, "global", {"offwidth": "1280", "offheight": "960"})
+    dfl = ET.SubElement(mj, "default")
+    ET.SubElement(dfl, "joint", {"armature": "0.01", "frictionloss": "0.002"})
+    asset = mj.find("asset")
+    ET.SubElement(asset, "texture", {"type": "skybox", "builtin": "gradient",
+        "rgb1": "0.3 0.5 0.7", "rgb2": "0 0 0", "width": "512", "height": "512"})
+    ET.SubElement(asset, "texture", {"name": "grid", "type": "2d", "builtin": "checker",
+        "rgb1": "0.2 0.3 0.4", "rgb2": "0.1 0.15 0.2", "width": "512", "height": "512"})
+    ET.SubElement(asset, "material", {"name": "grid", "texture": "grid",
+        "texrepeat": "6 6", "reflectance": "0.1"})
+    wb = mj.find("worldbody")
+    ET.SubElement(wb, "light", {"pos": "0 0 2", "dir": "0 0 -1", "directional": "true"})
+    ET.SubElement(wb, "geom", {"name": "floor", "type": "plane", "size": "0 0 0.05",
+        "material": "grid", "contype": "1", "conaffinity": "1",
+        "friction": "1.0 0.02 0.001"})
+
+    act = ET.SubElement(mj, "actuator")
+    for j in ACTUATED:
+        ET.SubElement(act, "position", {"name": f"act_{j}", "joint": j,
+            "kp": f"{KP}", "kv": f"{KV}", "forcerange": f"-{FORCE} {FORCE}"})
+
+    sen = ET.SubElement(mj, "sensor")
+    for j in ACTUATED + ["ankle_l", "ankle_r"]:
+        ET.SubElement(sen, "jointpos", {"name": f"pos_{j}", "joint": j})
+        ET.SubElement(sen, "jointvel", {"name": f"vel_{j}", "joint": j})
+    ET.SubElement(sen, "framequat", {"name": "torso_quat", "objtype": "site", "objname": "imu"})
+    ET.SubElement(sen, "gyro", {"name": "torso_gyro", "site": "imu"})
+    ET.SubElement(sen, "accelerometer", {"name": "torso_acc", "site": "imu"})
+    ET.SubElement(sen, "framepos", {"name": "torso_pos", "objtype": "site", "objname": "imu"})
+    ET.SubElement(sen, "framelinvel", {"name": "torso_linvel", "objtype": "site", "objname": "imu"})
+    ET.SubElement(sen, "frameangvel", {"name": "torso_angvel", "objtype": "site", "objname": "imu"})
+    for side in ("l", "r"):
+        ET.SubElement(sen, "touch", {"name": f"touch_{side}", "site": f"foot_site_{side}"})
+
+    key = ET.SubElement(mj, "keyframe")
+    qpos = f"0 0 {STAND_HEIGHT} 1 0 0 0 " + " ".join(["0"] * 8)
+    ET.SubElement(key, "key", {"name": "stand", "qpos": qpos,
+                               "ctrl": " ".join(["0"] * len(ACTUATED))})
+
+    ET.indent(tree, space="  ")
+    tree.write(OUT, encoding="utf-8", xml_declaration=False)
+    print(f"wrote {OUT}  (torso {torso_mass:.3f} kg, implicit integrator)")
+
+
 for out, tmass, tinertia in VARIANTS:
     build(out, tmass, tinertia)
+
+# Add Warp variant (implicit integrator + primitive collisions)
+add_warp_variant("models/mjcf/biped_warp.xml", TORSO_BASE + JETSON, "6e-4 5e-4 4e-4")
