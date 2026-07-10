@@ -8,7 +8,8 @@ Phase 6 structure:
 - Phase 6.B (done): observations.py — Actor/critic observation groups
 - Phase 6.C (done): commands.py, init_noise.py, domain_randomization.py —
   velocity command sampler, init-state noise, domain randomization
-- Phase 6.D: rewards.py — Reward + termination functions (stubs)
+- Phase 6.D (done): rewards.py, terminations.py — Reward + termination
+  functions (stubs)
 - Phase 6.E: config.py — Full ManagerBasedRlEnvCfg assembly
 
 For local CPU testing (Phases 0-5 gates), use sim/ package with biped.xml.
@@ -28,6 +29,23 @@ from .observations import (
 from .commands import CommandRangeCfg, sample_command
 from .init_noise import InitNoiseCfg, sample_init_state, apply_init_state
 from .domain_randomization import DomainRandomizationCfg, DomainRandomizer
+from .rewards import (
+    upright,
+    RewardCfg,
+    alive_bonus,
+    upright_term,
+    command_tracking_term,
+    control_effort_term,
+    action_rate_term,
+    compute_reward,
+)
+from .terminations import (
+    TerminationCfg,
+    fall_tilt,
+    fall_height,
+    fall,
+    time_out,
+)
 
 __all__ = [
     "BipedEntityCfg",
@@ -47,4 +65,17 @@ __all__ = [
     "apply_init_state",
     "DomainRandomizationCfg",
     "DomainRandomizer",
+    "upright",
+    "RewardCfg",
+    "alive_bonus",
+    "upright_term",
+    "command_tracking_term",
+    "control_effort_term",
+    "action_rate_term",
+    "compute_reward",
+    "TerminationCfg",
+    "fall_tilt",
+    "fall_height",
+    "fall",
+    "time_out",
 ]
