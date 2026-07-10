@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <robot name="assembly_simple">
-    <mujoco><compiler meshdir="/Users/rahulbouri/Developer/biped/meshes/stl" strippath="true" balanceinertia="true" discardvisual="false" fusestatic="false" angle="radian" /></mujoco><link name="composite_part_1__1_">
+    <mujoco><compiler meshdir="/Users/rahulbouri/Developer/biped/.claude/worktrees/clean-push/meshes/stl" strippath="true" balanceinertia="true" discardvisual="false" fusestatic="false" angle="radian" /></mujoco><link name="composite_part_1__1_">
         <inertial>
             <mass value="2.6283e-05" />
             <origin xyz="2.02995e-18 0.0190036 1.19618e-18" rpy="0 -0 0" />
@@ -726,42 +726,42 @@
         <axis xyz="0 -1 0" />
         <parent link="motor_3" />
         <child link="hip_joint_a" />
-        <limit effort="1" velocity="1" lower="-1.39626" upper="1.39626" />
+        <limit effort="2.5" velocity="1" lower="-1.39626" upper="1.39626" />
     <dynamics damping="0.05" /></joint>
     <joint name="hip_pitch_r" type="revolute">
         <origin xyz="0.00314735 -0.002 0.016" rpy="0 -1.5708 3.14159" />
         <axis xyz="-0 -1 -0" />
         <parent link="hip_joint_b_2" />
         <child link="motor_1" />
-        <limit effort="1" velocity="1" lower="-1.39626" upper="1.39626" />
+        <limit effort="2.5" velocity="1" lower="-1.39626" upper="1.39626" />
     <dynamics damping="0.05" /></joint>
     <joint name="hip_roll_l" type="revolute">
         <origin xyz="0.00314735 -0.002 0.016" rpy="-3.14159 -3.08556e-15 3.55307e-28" />
         <axis xyz="-0 -1 -0" />
         <parent link="hip_joint_b_1" />
         <child link="motor_4" />
-        <limit effort="1" velocity="1" lower="-2.26893" upper="0.0872665" />
+        <limit effort="2.5" velocity="1" lower="-2.26893" upper="0.0872665" />
     <dynamics damping="0.05" /></joint>
     <joint name="hip_roll_r" type="revolute">
         <origin xyz="-0.03 -0.00075 -0.0113" rpy="-4.50273e-31 -8.36484e-15 1.07658e-16" />
         <axis xyz="0 1 0" />
         <parent link="motor_5" />
         <child link="hip_joint_a_2" />
-        <limit effort="1" velocity="1" lower="-0.0872665" upper="2.26893" />
+        <limit effort="2.5" velocity="1" lower="-0.0872665" upper="2.26893" />
     <dynamics damping="0.05" /></joint>
     <joint name="knee_l" type="revolute">
         <origin xyz="-0.0338 -0.03575 -0.0113" rpy="-5.26172e-17 -5.37322e-14 -3.14159" />
         <axis xyz="0 -1 0" />
         <parent link="motor" />
         <child link="tibia_2" />
-        <limit effort="1" velocity="1" lower="-1.39626" upper="1.39626" />
+        <limit effort="2.5" velocity="1" lower="-1.39626" upper="1.39626" />
     <dynamics damping="0.05" /></joint>
     <joint name="knee_r" type="revolute">
         <origin xyz="-0.03 -0.00075 -0.0113" rpy="3.14159 2.49218e-15 3.14159" />
         <axis xyz="0 1 0" />
         <parent link="motor_2" />
         <child link="tibia_1" />
-        <limit effort="1" velocity="1" lower="-1.39626" upper="1.39626" />
+        <limit effort="2.5" velocity="1" lower="-1.39626" upper="1.39626" />
     <dynamics damping="0.05" /></joint>
     <joint name="ankle_r" type="revolute">
         <origin xyz="-3.25261e-18 0.025 -2.77556e-17" rpy="0.5321 7.27196e-15 -1.5708" />

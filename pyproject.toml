@@ -2,9 +2,9 @@
 name = "biped"
 version = "0.1.0"
 description = "Biped robot simulation and control using MuJoCo"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
-    "mujoco>=3.0.0",
+    "mujoco>=3.10,<4",
     "numpy>=1.24.0",
 ]
 

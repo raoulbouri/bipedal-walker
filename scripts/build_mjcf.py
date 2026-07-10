@@ -41,6 +41,9 @@ for j in robot.findall("joint"):
         d = j.find("dynamics") or ET.SubElement(j, "dynamics")
         if d.get("damping") is None:
             d.set("damping", "0.05")
+        lim = j.find("limit")
+        if lim is not None:
+            lim.set("effort", "2.5")
 
 tree.write(MJURDF, encoding="utf-8", xml_declaration=True)
 print("wrote", MJURDF)

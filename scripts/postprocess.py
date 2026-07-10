@@ -3,10 +3,17 @@ import xml.etree.ElementTree as ET
 
 RAW = "models/mjcf/biped_raw.xml"
 
-KP = 5.0
-KV = 0.2
-FORCE = 3.0
-STAND_HEIGHT = 0.2061
+KP = 40.0
+KV = 10.0
+FORCE = 2.5
+# Recalibrated 2026-07-09 (Phase 0): the original 0.2061 value left both feet
+# floating 1-3mm above the floor at the stand keyframe (0 contacts, touch
+# sensors read 0), found by Phase 0's foot-contact integration test. Feet are
+# not perfectly level (small L/R asymmetry in leg geometry), so an exact
+# zero-gap shift for one foot leaves the other still floating; this value
+# is calibrated via mesh AABB corners so BOTH feet have a small (<1mm)
+# interpenetration margin, guaranteeing contact/touch-sensor readings at rest.
+STAND_HEIGHT = 0.2030
 ACTUATED = ["hip_roll_l", "hip_pitch_l", "knee_l",
             "hip_roll_r", "hip_pitch_r", "knee_r"]
 FOOT_BODIES = {"foot": "r", "foot_1": "l"}
