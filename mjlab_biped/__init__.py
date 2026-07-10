@@ -10,7 +10,14 @@ Phase 6 structure:
   velocity command sampler, init-state noise, domain randomization
 - Phase 6.D (done): rewards.py, terminations.py — Reward + termination
   functions (stubs)
-- Phase 6.E: config.py — Full ManagerBasedRlEnvCfg assembly
+- Phase 6.E (done): config.py — Full env config assembly + local task
+  registry
+
+Also included: local_env.py — BipedLocalEnv, a single-environment, CPU-only
+wrapper (not part of the mjlab-shaped registry) for local visual
+sanity-checking of the assembled obs/reward/termination/command/noise
+pieces on macOS via `scripts/visualize_env.py`, ahead of the real Colab
+training run.
 
 For local CPU testing (Phases 0-5 gates), use sim/ package with biped.xml.
 For GPU training on Colab (Phase 7+), use mjlab_biped/ with biped_warp.xml.
@@ -46,6 +53,16 @@ from .terminations import (
     fall,
     time_out,
 )
+from .config import (
+    SceneCfg,
+    SimCfg,
+    BipedEnvCfg,
+    make_play_env_cfg,
+    TASK_REGISTRY,
+    register_mjlab_task,
+    get_task_cfg,
+)
+from .local_env import BipedLocalEnv
 
 __all__ = [
     "BipedEntityCfg",
@@ -78,4 +95,12 @@ __all__ = [
     "fall_height",
     "fall",
     "time_out",
+    "SceneCfg",
+    "SimCfg",
+    "BipedEnvCfg",
+    "make_play_env_cfg",
+    "TASK_REGISTRY",
+    "register_mjlab_task",
+    "get_task_cfg",
+    "BipedLocalEnv",
 ]
