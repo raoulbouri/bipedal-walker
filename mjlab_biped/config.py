@@ -28,6 +28,7 @@ from .terminations import TerminationCfg
 from .commands import CommandRangeCfg
 from .init_noise import InitNoiseCfg
 from .domain_randomization import DomainRandomizationCfg
+from .rl_cfg import RunnerCfg
 
 
 @dataclass
@@ -136,5 +137,5 @@ register_mjlab_task(
     "Mjlab-Biped-Balance-v0",
     env_cfg=BipedEnvCfg(),
     play_env_cfg=make_play_env_cfg(),
-    rl_cfg=None,
+    rl_cfg=RunnerCfg(),
 )

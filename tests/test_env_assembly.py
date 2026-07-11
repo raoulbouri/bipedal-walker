@@ -33,7 +33,9 @@ class TestTaskRegistration:
         assert "env_cfg" in cfg
         assert "play_env_cfg" in cfg
         assert "rl_cfg" in cfg
-        assert cfg["rl_cfg"] is None
+        # Phase 7.B wires a real RunnerCfg() in (was None before 7.B existed).
+        from mjlab_biped.rl_cfg import RunnerCfg
+        assert isinstance(cfg["rl_cfg"], RunnerCfg)
         assert isinstance(cfg["env_cfg"], BipedEnvCfg)
         assert isinstance(cfg["play_env_cfg"], BipedEnvCfg)
 
