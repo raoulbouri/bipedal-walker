@@ -44,9 +44,30 @@ bundle-root/
 ├── docs/
 │   └── mjlab_adapter_notes.md   (Phase 7.C — read before debugging mjlab_task.py)
 ├── requirements-colab.txt
-└── notebooks/
-    └── train_biped.ipynb
+├── notebooks/
+│   └── train_biped.ipynb
+└── scripts/
+    ├── colab_train.py   (added 2026-07-12 — use instead of the bare `train` CLI)
+    └── colab_play.py    (added 2026-07-12 — use instead of the bare `play` CLI)
 ```
+
+**`scripts/colab_train.py`/`colab_play.py`, added 2026-07-12:** the bare
+`train`/`play` console scripts cannot see `mjlab_biped`'s task
+registration — they only auto-discover external tasks through a
+`"mjlab.tasks"` Python entry-point group, which requires a properly
+pip-installed package; this bundle deliberately ships `mjlab_biped/` as
+an unzipped directory, not an installed package, so it's invisible to
+that mechanism. Confirmed live (a real user's Colab session hit `error:
+invalid choice: 'Mjlab-Biped-Balance-v0'`) and root-caused via direct
+inspection of mjlab's own source
+(`mjlab/__init__.py::_import_registered_packages()`,
+`mjlab/scripts/train.py`/`play.py`'s `main()`). These two driver scripts
+import `mjlab_biped.mjlab_task` (registering the task as a side effect)
+in the same process before calling mjlab's real CLI entry point — same
+flags as the console scripts themselves, just invoked via `python
+scripts/colab_train.py <task> <flags...>` instead of `train <task>
+<flags...>`. See `docs/mjlab_adapter_notes.md`'s "train/play CLI task
+discovery" section for the full writeup.
 
 **Only `biped_warp.xml`** — there is no `biped_warp_no_jetson.xml`; the
 Jetson mass on/off axis is an in-memory `DomainRandomizer` toggle (Phase

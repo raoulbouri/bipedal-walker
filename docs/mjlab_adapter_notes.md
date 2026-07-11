@@ -194,10 +194,86 @@ above); only #5 (history stacking) and #6 (CLI flags) remain open.
    single-frame actor makes the task an unsolvable POMDP (see
    `docs/observation_spec.md`'s rationale for why the stack exists at
    all).
-6. **The exact `--env.*`/`--agent.*` CLI flag paths** for overriding
-   `num_envs`, `max_iterations`, etc. from the command line (vs editing
-   `mjlab_task.py`'s Python defaults directly, which always works
-   regardless of CLI flag names).
+6. ~~**The exact `--env.*`/`--agent.*` CLI flag paths.**~~ **PARTIALLY
+   RESOLVED 2026-07-12.** `--env.scene.num-envs N` and
+   `--agent.max-iterations N` (the flags already used in the notebook's
+   training cell) are confirmed real and accepted — verified locally by
+   running `train`'s actual `tyro`-parsed CLI against the real biped task
+   and confirming no "unrecognized argument" error for either flag (see
+   item #7 below for the *task name* problem this same investigation
+   found, which is a different failure mode entirely). Still open: the
+   full space of other `--env.*`/`--agent.*` overrides beyond these two
+   (e.g. `--agent.num-steps-per-env`, DR toggles) hasn't been
+   individually exercised — `tyro` builds the flag surface directly from
+   `TrainConfig`'s dataclass fields (`mjlab/scripts/train.py`), so any
+   field name there is a reasonable guess, just not each one confirmed.
+
+## Sub-task 7.C.1 (2026-07-12) — `train`/`play` CLI task discovery
+
+**Real, live bug hit by the user in Colab**, not a guess:
+`train Mjlab-Biped-Balance-v0` failed with `error: argument {...}:
+invalid choice: 'Mjlab-Biped-Balance-v0'`, even though the user had
+already confirmed `import mjlab_biped.mjlab_task` correctly registers
+the task (`mjlab.tasks.registry.list_tasks()` includes it in a process
+that has done that import). The user's own diagnosis was exactly right:
+the `train`/`play` console scripts are fresh interpreters that never
+import `mjlab_biped` themselves.
+
+**Root cause, found by reading mjlab's actual source (not guessed):**
+- `mjlab/scripts/train.py`'s `main()` (and `play.py`'s, identically)
+  does `import mjlab.tasks` right before building the CLI's task-choice
+  type from `list_tasks()`. That import only pulls in **mjlab's own
+  built-in task packages** (`mjlab/tasks/__init__.py` calls
+  `import_packages(__name__, ...)`, scanning mjlab's own subpackages
+  only) — it has no knowledge of `mjlab_biped` at all.
+- The *real* intended mechanism for external packages: `mjlab/__init__.py`
+  (executed automatically the moment anything does `import mjlab`, which
+  `train.py`'s own imports trigger) calls
+  `_import_registered_packages()`, which does
+  `entry_points().select(group="mjlab.tasks")` and imports whatever it
+  finds — a genuine plugin system, but keyed off **installed package
+  entry-point metadata** (a real `.dist-info/entry_points.txt`, the kind
+  `pip install` produces from a package's `pyproject.toml`
+  `[project.entry-points."mjlab.tasks"]` table).
+- `mjlab_biped/` in the Colab bundle is deliberately **not** an installed
+  package — it's an unzipped directory added to `sys.path`/cwd. It has
+  no `pyproject.toml`, no wheel, no entry-point metadata. So
+  `entry_points().select(group="mjlab.tasks")` finds nothing for it, and
+  the task is never auto-registered before the CLI validates the task
+  name — exactly reproducing the user's symptom.
+
+**Fix:** `scripts/colab_train.py` and `scripts/colab_play.py` — tiny
+driver scripts that `import mjlab_biped.mjlab_task` (registering the
+task as a side effect, the same import the earlier notebook cell already
+does) in the *same* Python process before calling mjlab's real
+`train.py`/`play.py` `main()` function directly. This sidesteps the
+entry-point gap entirely with zero packaging risk (no `pyproject.toml`
+to write for `mjlab_biped`, no `pip install -e .` to get right, no new
+UNVERIFIED surface). Same CLI flag syntax as the console scripts
+themselves — only the invocation changes, from `train <task> <flags>`
+to `python scripts/colab_train.py <task> <flags>`.
+
+**Verified locally (macOS CPU, no GPU):** `python scripts/colab_train.py
+Mjlab-Biped-Balance-v0 --env.scene.num-envs 2 --agent.max-iterations 1`
+gets **past task selection entirely** (no "invalid choice") and fails
+only at mjlab's own GPU-selection step (`IndexError: list index out of
+range` in `select_gpus([0])`, because there is no GPU on this Mac) — the
+expected, correct failure mode locally, and proof the fix resolves the
+actual bug. `python scripts/colab_play.py Mjlab-Biped-Balance-v0`
+likewise passes task selection and fails only on
+`play.py`'s own downstream requirement for a real
+`--checkpoint-file`/`--wandb-run-path`. On a real Colab GPU runtime,
+`colab_train.py` should proceed into actual training.
+
+**An alternative not taken:** packaging `mjlab_biped` as a real
+pip-installable package with a `[project.entry-points."mjlab.tasks"]`
+table, so the *bare* `train`/`play` console scripts would work unmodified.
+Rejected for now as strictly more moving parts (a new `pyproject.toml`,
+verifying `pip install -e .`'s editable-install entry-point metadata
+actually gets picked up in a Colab environment) for no behavioral
+difference — the driver-script fix is simpler and already verified.
+Revisit only if there's a concrete reason the bare console scripts must
+work unmodified (there isn't one currently).
 
 ## The Phase 7.C smoke-test-first plan (see the notebook)
 

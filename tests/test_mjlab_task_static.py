@@ -220,8 +220,16 @@ def test_package_bundle_script_produces_expected_zip_contents():
 def test_notebook_has_smoke_test_before_training_cell():
     """Verify the smoke-test-before-training ordering CLAUDE.md's Sub-task
     7.C plan describes is actually present in the notebook, not just
-    described in prose: the training cell (containing '!train ') must
-    come AFTER a smoke-test cell (containing both 'reset' and 'assert')."""
+    described in prose: the training cell must come AFTER a smoke-test
+    cell (containing both 'reset' and 'assert').
+
+    2026-07-12: the training cell now invokes `scripts/colab_train.py`
+    rather than the bare `train` console script directly (see
+    docs/mjlab_adapter_notes.md's "train/play CLI task discovery" section
+    -- the bare console script can't see mjlab_biped's task registration
+    at all, since it only auto-discovers external tasks via an
+    entry-point mechanism that requires mjlab_biped to be a properly
+    pip-installed package, which this bundle deliberately is not)."""
     with open(NOTEBOOK_PATH) as f:
         nb = json.load(f)
 
@@ -235,13 +243,13 @@ def test_notebook_has_smoke_test_before_training_cell():
 
     train_idx = None
     for i, cell in enumerate(cells):
-        if "!train " in cell_source(cell):
+        if "colab_train.py" in cell_source(cell):
             train_idx = i
             break
 
     assert train_idx is not None, (
-        "No cell containing the training invocation '!train ' found in "
-        "notebooks/train_biped.ipynb"
+        "No cell containing the training invocation 'colab_train.py' "
+        "found in notebooks/train_biped.ipynb"
     )
 
     smoke_idx = None
