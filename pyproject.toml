@@ -22,6 +22,15 @@ colab = [
     "mjlab>=1.4.0",
     "rsl-rl-lib>=5.4.0",
 ]
+eval = [
+    # CPU-only torch, needed to load a trained RSL-RL checkpoint (.pt) and
+    # run the actor MLP forward pass locally in scripts/eval_checkpoint.py.
+    # Deliberately does NOT pull in mjlab/rsl-rl-lib/mujoco-warp (the colab
+    # group above) -- the actor network is a tiny 4-layer MLP, reimplemented
+    # directly in eval_checkpoint.py rather than depending on the full rsl_rl
+    # package, so this stays a lightweight, Mac-friendly addition.
+    "torch>=2.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
