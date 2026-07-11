@@ -58,6 +58,7 @@ BUNDLE_FILES = [
     "docs/mjlab_adapter_notes.md",
     "requirements-colab.txt",
     "notebooks/train_biped.ipynb",
+    "notebooks/view_biped.ipynb",
     "scripts/colab_train.py",
     "scripts/colab_play.py",
 ]

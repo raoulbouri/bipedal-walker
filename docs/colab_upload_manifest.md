@@ -45,11 +45,27 @@ bundle-root/
 │   └── mjlab_adapter_notes.md   (Phase 7.C — read before debugging mjlab_task.py)
 ├── requirements-colab.txt
 ├── notebooks/
-│   └── train_biped.ipynb
+│   ├── train_biped.ipynb
+│   └── view_biped.ipynb   (added 2026-07-12 — live parallel-envs viser viewer)
 └── scripts/
     ├── colab_train.py   (added 2026-07-12 — use instead of the bare `train` CLI)
     └── colab_play.py    (added 2026-07-12 — use instead of the bare `play` CLI)
 ```
+
+**`notebooks/view_biped.ipynb`, added 2026-07-12:** a separate companion
+to `train_biped.ipynb` (does not replace it) that embeds mjlab's **viser**
+web viewer directly in the Colab output as an iframe — the same technique
+as mjlab's own demo notebook (`serve_kernel_port_as_iframe`), but pointed
+at `Mjlab-Biped-Balance-v0`. Lets you watch **N parallel copies** of the
+robot at once: `agent="zero"/"random"` needs no checkpoint (verifies
+parallel rendering before training), `agent="trained"` replays the newest
+`logs/rsl_rl/**/model_*.pt` checkpoint. It launches the viewer via
+`scripts/colab_play.py` as a background subprocess, pins the port with
+viser's `_VISER_PORT_OVERRIDE`, and parses the actually-bound port from
+viser's `listening *:<port>` startup log. Verified end-to-end locally
+(macOS CPU, real mjlab 1.5.0): the viewer subprocess binds the port and
+accepts TCP connections. Train with thousands of envs (GPU parallelism);
+view with ~16 (browser clarity).
 
 **`scripts/colab_train.py`/`colab_play.py`, added 2026-07-12:** the bare
 `train`/`play` console scripts cannot see `mjlab_biped`'s task
