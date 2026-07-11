@@ -342,9 +342,27 @@ def make_play_env_cfg() -> ManagerBasedRlEnvCfg:
 # ---------------------------------------------------------------------------
 # RSL-RL runner cfg: translate our frozen mjlab_biped/rl_cfg.py values into
 # mjlab's real RslRlOnPolicyRunnerCfg/RslRlModelCfg/RslRlPpoAlgorithmCfg.
-# UNVERIFIED: RslRlModelCfg's exact field names (assumed to mirror
-# RslRlPpoActorCriticCfg's fields per the earlier IsaacLab-docs research,
-# since mjlab's own class is named differently -- confirm on Colab).
+#
+# VERIFIED 2026-07-11 (was UNVERIFIED; caught live via a real Colab
+# TypeError, then confirmed against src/mjlab/rl/config.py directly).
+# The structure is genuinely different from the IsaacLab-docs-derived
+# guess this file originally shipped with, not just renamed fields:
+#   - RslRlOnPolicyRunnerCfg has SEPARATE `actor: RslRlModelCfg` and
+#     `critic: RslRlModelCfg` fields -- there is no single combined
+#     "policy" config with actor_hidden_dims/critic_hidden_dims.
+#   - RslRlModelCfg's real fields are `hidden_dims` (singular, one
+#     network's own dims), `activation`, `obs_normalization` (singular
+#     bool), plus `cnn_cfg`, `distribution_cfg`, `rnn_type`,
+#     `rnn_hidden_dim`, `rnn_num_layers`, `class_name`.
+#   - `init_noise_std` is NOT a direct field at all -- it lives inside
+#     `distribution_cfg["init_std"]`, and only the ACTOR needs a
+#     distribution_cfg (the critic just outputs a scalar value estimate,
+#     no action distribution).
+#   - `obs_groups` values are tuples, e.g. {"actor": ("actor",),
+#     "critic": ("critic",)} (RslRlBaseRunnerCfg's own default), not
+#     lists.
+# See mjlab_biped/rl_cfg.py's module docstring for the same correction
+# applied to our Mac-side pure-Python mirror.
 # ---------------------------------------------------------------------------
 
 MJLAB_RL_CFG = RslRlOnPolicyRunnerCfg(
@@ -352,13 +370,20 @@ MJLAB_RL_CFG = RslRlOnPolicyRunnerCfg(
     max_iterations=_rl_cfg.max_iterations,
     save_interval=_rl_cfg.save_interval,
     obs_groups=_rl_cfg.obs_groups,
-    policy=RslRlModelCfg(
-        actor_hidden_dims=_rl_cfg.policy.actor_hidden_dims,
-        critic_hidden_dims=_rl_cfg.policy.critic_hidden_dims,
-        activation=_rl_cfg.policy.activation,
-        actor_obs_normalization=_rl_cfg.policy.actor_obs_normalization,
-        critic_obs_normalization=_rl_cfg.policy.critic_obs_normalization,
-        init_noise_std=_rl_cfg.policy.init_noise_std,
+    actor=RslRlModelCfg(
+        hidden_dims=tuple(_rl_cfg.actor.hidden_dims),
+        activation=_rl_cfg.actor.activation,
+        obs_normalization=_rl_cfg.actor.obs_normalization,
+        distribution_cfg={
+            "class_name": "GaussianDistribution",
+            "init_std": _rl_cfg.actor.init_noise_std,
+            "std_type": "scalar",
+        },
+    ),
+    critic=RslRlModelCfg(
+        hidden_dims=tuple(_rl_cfg.critic.hidden_dims),
+        activation=_rl_cfg.critic.activation,
+        obs_normalization=_rl_cfg.critic.obs_normalization,
     ),
     algorithm=RslRlPpoAlgorithmCfg(
         num_learning_epochs=_rl_cfg.algorithm.num_learning_epochs,

@@ -63,15 +63,29 @@ starts producing NaN/garbage):
 3. **`env.action_manager.action` / `.prev_action`, `env.command_manager
    .get_command("base_velocity")`.** Reasonable Isaac-Lab-convention
    guesses, not confirmed against mjlab source directly.
-4. **`RslRlModelCfg`'s exact field names.** This adapter assumes it
-   mirrors the fields IsaacLab's `RslRlPpoActorCriticCfg` documents
-   (`actor_hidden_dims`, `critic_hidden_dims`, `activation`,
-   `actor_obs_normalization`, `critic_obs_normalization`,
-   `init_noise_std`) — but mjlab's own class is named differently
-   (`RslRlModelCfg`, not `RslRlPpoActorCriticCfg`), so mjlab may be a
-   genuinely separate implementation with different field names, not
-   just a rename. Confirmed to exist and be importable from `mjlab.rl`;
-   field names not confirmed.
+4. ~~**`RslRlModelCfg`'s exact field names.**~~ **RESOLVED 2026-07-11**
+   — this was the first UNVERIFIED item to actually bite: the original
+   guess (`actor_hidden_dims`/`critic_hidden_dims`/
+   `actor_obs_normalization`/`critic_obs_normalization`/`init_noise_std`
+   on one combined "policy" config) raised a live `TypeError:
+   RslRlModelCfg.__init__() got an unexpected keyword argument
+   'actor_hidden_dims'` on the very first `import mjlab_biped.mjlab_task`
+   in Colab. Confirmed against `src/mjlab/rl/config.py` directly: mjlab's
+   `RslRlOnPolicyRunnerCfg` has SEPARATE `actor: RslRlModelCfg` and
+   `critic: RslRlModelCfg` fields, not one combined policy config.
+   `RslRlModelCfg`'s real fields are `hidden_dims` (singular per
+   network), `activation`, `obs_normalization` (singular bool), plus
+   `cnn_cfg`/`distribution_cfg`/`rnn_type`/`rnn_hidden_dim`/
+   `rnn_num_layers`/`class_name`. `init_noise_std` is NOT a direct field
+   — it lives inside `distribution_cfg["init_std"]`, and only the actor
+   needs a `distribution_cfg` (the critic has no action distribution,
+   just a scalar value estimate). `obs_groups` values are tuples
+   (`RslRlBaseRunnerCfg`'s own default:
+   `{"actor": ("actor",), "critic": ("critic",)}`), not lists. Both
+   `mjlab_task.py` and the Mac-side mirror `mjlab_biped/rl_cfg.py` (which
+   had the same wrong structure, since it was built from the same wrong
+   guess) were fixed to match this real shape — see `rl_cfg.py`'s module
+   docstring for the corrected mirror.
 5. **Observation history stacking mechanism** (the H=5 actor stack from
    Phase 7.pre). CLAUDE.md's Sub-task 7.B already flagged this as a
    required Sonnet pre-verification item before 7.C, and it remains

@@ -1,27 +1,42 @@
 """
 RSL-RL PPO runner configuration for the biped RL task (Phase 7.B).
 
-This module mirrors the REAL `rsl_rl`/IsaacLab 3-tier config shape
-(`RslRlOnPolicyRunnerCfg` nesting `RslRlPpoActorCriticCfg` and
-`RslRlPpoAlgorithmCfg` — see IsaacLab's `isaaclab_rl.rsl_rl.rl_cfg` docs,
-verified 2026-07-11) as three plain Python dataclasses. It does NOT import
-the real `rsl_rl` or `torch` packages — those are Colab-only dependencies
-per CLAUDE.md, never part of the lean Mac core deps. Mirroring the real
-nesting now means that wiring this into actual `rsl_rl` on Colab in a
-later phase (7.C+) is a straight rename/re-parent of these dataclasses
-into the real `RslRlOnPolicyRunnerCfg`/`RslRlPpoActorCriticCfg`/
-`RslRlPpoAlgorithmCfg` types, not a redesign.
+This module mirrors the REAL mjlab `RslRlOnPolicyRunnerCfg`/
+`RslRlModelCfg`/`RslRlPpoAlgorithmCfg` shape (see
+`src/mjlab/rl/config.py`, verified directly 2026-07-11 after a live
+Colab `TypeError` exposed that the original IsaacLab-docs-derived guess
+was structurally wrong, not just differently named) as plain Python
+dataclasses. It does NOT import the real `mjlab`/`rsl_rl`/`torch`
+packages — those are Colab-only dependencies per CLAUDE.md, never part
+of the lean Mac core deps. Mirroring the real structure now means wiring
+this into actual mjlab on Colab is a straight pass-through of field
+values, not a redesign.
 
-Per CLAUDE.md's Sub-task 7.B: this is config only. No real rsl_rl wiring,
-no Colab work, no actual training happens here (that is Phase 7.C). All
-frozen starting values below are sourced from IsaacLab's flat-terrain
-velocity-task PPO config, cross-checked against the real rsl_rl/IsaacLab
-docs, and are explicitly marked as tunable via `# TODO(user): tune`
-comments on every field.
+**2026-07-11 correction (was wrong before this):** mjlab's real
+`RslRlOnPolicyRunnerCfg` has SEPARATE `actor: RslRlModelCfg` and
+`critic: RslRlModelCfg` fields — there is no single combined "policy"
+config with `actor_hidden_dims`/`critic_hidden_dims`. `RslRlModelCfg`'s
+real fields are `hidden_dims` (singular, one network's own dims),
+`activation`, `obs_normalization` (singular bool). `init_noise_std` is
+NOT a direct field on `RslRlModelCfg` at all — in real mjlab it lives
+inside `distribution_cfg["init_std"]`, and only the actor needs a
+`distribution_cfg` (the critic just outputs a scalar value estimate, no
+action distribution) — `mjlab_task.py` handles that translation at the
+one place it's needed; this Mac-side mirror keeps a flat
+`init_noise_std` field on `ModelCfg` for simplicity/testability and
+`mjlab_task.py` reads it only off `.actor`. `obs_groups` values are
+tuples in real mjlab (`RslRlBaseRunnerCfg`'s own default:
+`{"actor": ("actor",), "critic": ("critic",)}`), not lists.
+
+Per CLAUDE.md's Sub-task 7.B: this is config only. No real rsl_rl
+wiring, no Colab work, no actual training happens here (that is Phase
+7.C). All frozen starting values below are sourced from IsaacLab's
+flat-terrain velocity-task PPO config, and are explicitly marked as
+tunable via `# TODO(user): tune` comments on every field.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 
 # Not a real rsl_rl field — a local sanity anchor for the dimension
@@ -31,19 +46,20 @@ ACTION_DIM = 6
 
 
 @dataclass
-class PolicyCfg:
-    """Mirrors `RslRlPpoActorCriticCfg`: actor/critic network + noise config."""
+class ModelCfg:
+    """
+    Mirrors real mjlab's `RslRlModelCfg` — one instance each for the
+    actor and the critic network (NOT a single combined policy config).
+    `init_noise_std` is only meaningful (and only read) for the actor's
+    instance — real mjlab nests it inside `distribution_cfg`, not as a
+    direct field; kept flat here for simplicity, translated by
+    `mjlab_task.py`.
+    """
 
-    actor_hidden_dims: List[int] = field(
-        default_factory=lambda: [512, 256, 128]
-    )  # TODO(user): tune
-    critic_hidden_dims: List[int] = field(
-        default_factory=lambda: [512, 256, 128]
-    )  # TODO(user): tune
+    hidden_dims: List[int] = field(default_factory=lambda: [512, 256, 128])  # TODO(user): tune
     activation: str = "elu"  # TODO(user): tune
-    actor_obs_normalization: bool = True  # TODO(user): tune
-    critic_obs_normalization: bool = True  # TODO(user): tune
-    init_noise_std: float = 1.0  # TODO(user): tune
+    obs_normalization: bool = True  # TODO(user): tune
+    init_noise_std: float = 1.0  # TODO(user): tune (actor only)
 
 
 @dataclass
@@ -67,8 +83,10 @@ class AlgorithmCfg:
 @dataclass
 class RunnerCfg:
     """
-    Mirrors `RslRlOnPolicyRunnerCfg`: top-level runner config, nesting
-    `policy: PolicyCfg` and `algorithm: AlgorithmCfg`.
+    Mirrors `RslRlOnPolicyRunnerCfg`: top-level runner config, with
+    SEPARATE `actor: ModelCfg` and `critic: ModelCfg` fields (not one
+    combined policy config — see module docstring) and
+    `algorithm: AlgorithmCfg`.
 
     `obs_groups` wires to the Phase 6.B observation manager's real group
     names ("actor" and "critic", see mjlab_biped/observations.py's
@@ -78,8 +96,9 @@ class RunnerCfg:
     num_steps_per_env: int = 24  # TODO(user): tune
     max_iterations: int = 1500  # TODO(user): tune (budget; gate on eval, not on exhausting it)
     save_interval: int = 50  # TODO(user): tune
-    obs_groups: Dict[str, List[str]] = field(
-        default_factory=lambda: {"actor": ["actor"], "critic": ["critic"]}
+    obs_groups: Dict[str, Tuple[str, ...]] = field(
+        default_factory=lambda: {"actor": ("actor",), "critic": ("critic",)}
     )
-    policy: PolicyCfg = field(default_factory=PolicyCfg)
+    actor: ModelCfg = field(default_factory=ModelCfg)
+    critic: ModelCfg = field(default_factory=ModelCfg)
     algorithm: AlgorithmCfg = field(default_factory=AlgorithmCfg)

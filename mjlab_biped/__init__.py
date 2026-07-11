@@ -39,7 +39,7 @@ from .observations import (
 from .commands import CommandRangeCfg, sample_command
 from .init_noise import InitNoiseCfg, sample_init_state, apply_init_state
 from .domain_randomization import DomainRandomizationCfg, DomainRandomizer
-from .rl_cfg import RunnerCfg, PolicyCfg, AlgorithmCfg, ACTION_DIM
+from .rl_cfg import RunnerCfg, ModelCfg, AlgorithmCfg, ACTION_DIM
 from .rewards import (
     upright,
     RewardCfg,
@@ -100,7 +100,7 @@ __all__ = [
     "DomainRandomizationCfg",
     "DomainRandomizer",
     "RunnerCfg",
-    "PolicyCfg",
+    "ModelCfg",
     "AlgorithmCfg",
     "ACTION_DIM",
     "upright",
