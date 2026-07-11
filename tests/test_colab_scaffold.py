@@ -170,8 +170,11 @@ def test_notebook_valid_and_cells_in_order():
     # The spec allows the GPU-assert step ("!nvidia-smi followed by a Python
     # cell (or the same cell)") to be one or two cells; this notebook splits
     # it into two (nvidia-smi, then the torch.cuda assert), for 6 cells total
-    # while still preserving the 5 documented logical steps in order.
-    assert len(cells) == 6, f"expected 6 cells, found {len(cells)}"
+    # for the Phase 7.0/7.A scaffold. Later sub-tasks (7.C: task
+    # registration, smoke test, training, eval cells) legitimately append
+    # MORE cells after these — this test only pins the first 6 (checked
+    # individually below), not the notebook's total length.
+    assert len(cells) >= 6, f"expected at least 6 cells, found {len(cells)}"
 
     # Cell 0: title markdown
     assert cells[0]["cell_type"] == "markdown"

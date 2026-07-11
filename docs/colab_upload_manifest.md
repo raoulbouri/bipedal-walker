@@ -37,9 +37,12 @@ bundle-root/
 │   ├── rewards.py
 │   ├── terminations.py
 │   ├── config.py
-│   ├── rl_cfg.py          (Phase 7.B — not yet created as of 7.A)
+│   ├── rl_cfg.py
+│   ├── mjlab_task.py      (Phase 7.C — imports real mjlab, Colab-only)
 │   ├── local_env.py       (present but inert on Colab, see note below)
 │   └── README.md
+├── docs/
+│   └── mjlab_adapter_notes.md   (Phase 7.C — read before debugging mjlab_task.py)
 ├── requirements-colab.txt
 └── notebooks/
     └── train_biped.ipynb
