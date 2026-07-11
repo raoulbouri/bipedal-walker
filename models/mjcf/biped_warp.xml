@@ -207,7 +207,7 @@
     <light pos="0 0 2" dir="0 0 -1" directional="true" />
     <geom name="floor" type="plane" size="0 0 0.05" material="grid" contype="1" conaffinity="1" friction="1.0 0.02 0.001" />
   </worldbody>
-  <option timestep="0.002" integrator="implicit" />
+  <option timestep="0.002" integrator="implicitfast" />
   <visual>
     <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0" />
     <global offwidth="1280" offheight="960" />

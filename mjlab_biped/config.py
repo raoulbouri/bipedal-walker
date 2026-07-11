@@ -44,7 +44,11 @@ class SceneCfg:
 class SimCfg:
     """Physics simulation configuration."""
     timestep: float = 0.002
-    integrator: str = "implicit"
+    # 2026-07-11: "implicit" is not a real mjlab integrator option (mjlab's
+    # own map only recognizes "euler"/"implicitfast" -- confirmed live
+    # against installed mjlab 1.5.0/mujoco-warp 3.10.0.1). "implicitfast"
+    # also matches biped.xml's CPU-validated integrator.
+    integrator: str = "implicitfast"
     decimation: int = 10
 
 

@@ -87,7 +87,7 @@ class BipedEntityCfg:
 
     # Physics configuration (frozen, Phase 2 validated)
     timestep: float = 0.002  # s (500 Hz)
-    integrator: str = "implicit"  # Warp-compatible
+    integrator: str = "implicitfast"  # Warp-compatible (verified 2026-07-11 against real mjlab)
     control_dt: float = 0.02  # s (50 Hz control rate)
     control_decimation: int = 10  # physics steps per control step
 

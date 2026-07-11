@@ -106,67 +106,95 @@ BIPED_ENTITY_CFG = EntityCfg(
 # joint_pos_rel / joint_vel_rel / time_out are mjlab BUILT-INS (imported
 # above) -- not reimplemented here.
 #
-# UNVERIFIED: the exact attribute for raw <sensor> readout on an mjlab
-# Entity. Best-guess convention (matches the joint_pos/joint_vel pattern
-# of env.scene[name].data.<field>): `env.scene[asset_cfg.name].data
-# .sensor_data["<sensor_name>"]`. If the Phase 7.C smoke-test cell fails
-# here, check `dir(env.scene["robot"].data)` interactively in Colab and
-# fix these three functions before touching anything else in this file.
+# VERIFIED 2026-07-11 against real mjlab 1.5.0 / mujoco-warp 3.10.0.1,
+# installed and run locally on macOS CPU (Warp's CPU fallback -- no GPU
+# needed for this, see docs/mjlab_adapter_notes.md's "local CPU testing"
+# section). Raw MuJoCo <sensor> elements already baked into
+# biped_warp.xml (torso_gyro, torso_acc, touch_l, touch_r, ...) are
+# auto-discovered by mjlab.scene.Scene._add_sensors() and wrapped as
+# BuiltinSensor.from_existing(name) -- read via `env.scene.sensors[name]
+# .data`, NOT `entity.data.sensor_data[...]` (that attribute doesn't
+# exist; confirmed via a live AttributeError). Sensor keys are prefixed
+# with the entity name ("robot/torso_gyro", not "torso_gyro") -- also
+# confirmed live via a direct `Scene(cfg.scene, device="cpu").sensors
+# .keys()` inspection. Body-pose attributes on
+# EntityData use a `_link_` infix mjlab's own Isaac-Lab-style naming
+# convention doesn't drop: `root_link_pos_w`, `root_link_quat_w`,
+# `root_link_lin_vel_w` (not `root_pos_w`/`root_quat_w`/`root_lin_vel_w`
+# as originally guessed). Whole-robot CoM is `root_com_pos_w` (backed by
+# MuJoCo's `subtree_com` at the root body -- the root's kinematic subtree
+# is the entire robot, since it's the floating base).
 # ---------------------------------------------------------------------------
 
 
 def gyro(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
-    entity = env.scene[asset_cfg.name]
-    return entity.data.sensor_data["torso_gyro"]  # UNVERIFIED: attribute path
+    del asset_cfg
+    return env.scene.sensors[f"{ROBOT_ENTITY_NAME}/torso_gyro"].data
 
 
 def projected_gravity(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    # No direct EntityData attribute for this (unlike IsaacLab) -- mjlab
+    # exposes body orientation but not a precomputed gravity projection,
+    # so it's derived here the same way IsaacLab itself does: rotate the
+    # world-frame gravity direction into the body frame via the inverse
+    # of the root orientation quaternion. mjlab.utils.lab_api.math's
+    # quat_apply_inverse is the verified real helper for this (used
+    # internally by EntityData.root_com_lin_vel_b/.root_com_ang_vel_b).
+    from mjlab.utils.lab_api.math import quat_apply_inverse
+
     entity = env.scene[asset_cfg.name]
-    return entity.data.projected_gravity_b  # UNVERIFIED: attribute name
+    quat = entity.data.root_link_quat_w
+    gravity_dir_w = torch.tensor([0.0, 0.0, -1.0], device=quat.device).expand(quat.shape[0], 3)
+    return quat_apply_inverse(quat, gravity_dir_w)
 
 
 def foot_touch(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
-    entity = env.scene[asset_cfg.name]
-    touch_l = entity.data.sensor_data["touch_l"]  # UNVERIFIED
-    touch_r = entity.data.sensor_data["touch_r"]  # UNVERIFIED
+    del asset_cfg
+    touch_l = env.scene.sensors[f"{ROBOT_ENTITY_NAME}/touch_l"].data
+    touch_r = env.scene.sensors[f"{ROBOT_ENTITY_NAME}/touch_r"].data
     return torch.cat([touch_l, touch_r], dim=-1)
 
 
 def accelerometer(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
-    entity = env.scene[asset_cfg.name]
-    return entity.data.sensor_data["torso_acc"]  # UNVERIFIED
+    del asset_cfg
+    return env.scene.sensors[f"{ROBOT_ENTITY_NAME}/torso_acc"].data
 
 
 def base_linvel(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
     entity = env.scene[asset_cfg.name]
-    return entity.data.root_lin_vel_w  # UNVERIFIED: attribute name
+    return entity.data.root_link_lin_vel_w
 
 
 def base_height(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
     entity = env.scene[asset_cfg.name]
-    return entity.data.root_pos_w[:, 2:3]  # UNVERIFIED: attribute name
+    return entity.data.root_link_pos_w[:, 2:3]
 
 
 def com(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
     entity = env.scene[asset_cfg.name]
-    return entity.data.com_pos_w  # UNVERIFIED: attribute name
+    return entity.data.root_com_pos_w
 
 
 def previous_action(env, asset_cfg: SceneEntityCfg = None) -> torch.Tensor:
-    # mjlab's ManagerBasedRlEnv keeps the last applied action on
-    # env.action_manager.action -- matches the Isaac-Lab-style manager
-    # convention this API mirrors (cartpole/velocity examples confirm
-    # env.action_manager exists; the exact attribute name for the
-    # PREVIOUS (not current) action buffer is UNVERIFIED -- check
-    # `env.action_manager.prev_action` vs `.action` if this errors).
-    return env.action_manager.prev_action  # UNVERIFIED: attribute name
+    # Verified: env.action_manager.action / .prev_action are real
+    # properties (mjlab/managers/action_manager.py's ActionManager).
+    return env.action_manager.prev_action
 
 
 def velocity_command(env, asset_cfg: SceneEntityCfg = None) -> torch.Tensor:
-    # UNVERIFIED: mjlab's command manager attribute path. Best guess,
-    # matching the "actor obs reads the current command" pattern from
-    # velocity_env_cfg.py's own observation term for command tracking.
-    return env.command_manager.get_command("base_velocity")
+    # 2026-07-11: make_biped_env_cfg() below does not (yet) pass a
+    # `commands=` dict to ManagerBasedRlEnvCfg, so env.command_manager is
+    # mjlab's NullCommandManager, whose get_command() always returns
+    # None -- confirmed live (a real env construction prints
+    # "<NullCommandManager> (inactive)"). Wiring a real mjlab
+    # CommandTermCfg (resampling mjlab_biped.commands.sample_command's
+    # logic each episode) is deferred to when Phase 7's curriculum
+    # widens CommandRangeCfg past all-zero; until then this returns a
+    # literal zero vector, which is exactly correct for the current
+    # balance-first gate (CommandRangeCfg()'s frozen default is
+    # vx/vy/yaw_rate all (0.0, 0.0)).
+    del asset_cfg
+    return torch.zeros(env.num_envs, 3, device=env.device)
 
 
 # ---------------------------------------------------------------------------
@@ -185,26 +213,30 @@ def alive_bonus_fn(env, asset_cfg: SceneEntityCfg = None) -> torch.Tensor:
 def upright_fn(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
     # 1 - 2*(qx^2 + qy^2), same closed-form as mjlab_biped.rewards.upright().
     entity = env.scene[asset_cfg.name]
-    quat = entity.data.root_quat_w  # UNVERIFIED: attribute name, [w,x,y,z] assumed
+    quat = entity.data.root_link_quat_w  # [w,x,y,z], MuJoCo convention
     qx, qy = quat[:, 1], quat[:, 2]
     return 1.0 - 2.0 * (qx**2 + qy**2)
 
 
 def command_tracking_fn(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    # See velocity_command()'s comment: command is a literal zero until
+    # a real CommandTermCfg is wired in for Phase 7's curriculum.
     entity = env.scene[asset_cfg.name]
-    lin_vel = entity.data.root_lin_vel_w[:, :2]  # UNVERIFIED
-    cmd = env.command_manager.get_command("base_velocity")[:, :2]
+    lin_vel = entity.data.root_link_lin_vel_w[:, :2]
+    cmd = torch.zeros_like(lin_vel)
     return -torch.norm(lin_vel - cmd, dim=-1)
 
 
 def control_effort_fn(env, asset_cfg: SceneEntityCfg = None) -> torch.Tensor:
-    action = env.action_manager.action  # UNVERIFIED: attribute name
+    del asset_cfg
+    action = env.action_manager.action
     return -torch.sum(action**2, dim=-1)
 
 
 def action_rate_fn(env, asset_cfg: SceneEntityCfg = None) -> torch.Tensor:
-    action = env.action_manager.action  # UNVERIFIED
-    prev = env.action_manager.prev_action  # UNVERIFIED
+    del asset_cfg
+    action = env.action_manager.action
+    prev = env.action_manager.prev_action
     return -torch.sum((action - prev) ** 2, dim=-1)
 
 
@@ -219,7 +251,7 @@ def fall_tilt_fn(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
 
 def fall_height_fn(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
     entity = env.scene[asset_cfg.name]
-    height = entity.data.root_pos_w[:, 2]  # UNVERIFIED
+    height = entity.data.root_link_pos_w[:, 2]
     return height < _term_cfg.height_threshold
 
 

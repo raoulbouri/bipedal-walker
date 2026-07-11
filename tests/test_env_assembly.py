@@ -47,7 +47,7 @@ class TestBipedEnvCfgDefaults:
         assert cfg.scene.num_envs == 4096
         assert cfg.sim.decimation == 10
         assert cfg.sim.timestep == 0.002
-        assert cfg.sim.integrator == "implicit"
+        assert cfg.sim.integrator == "implicitfast"
         assert cfg.scene.env_spacing == 2.0
         assert cfg.scene.terrain_type == "plane"
 

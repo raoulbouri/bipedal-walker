@@ -20,7 +20,7 @@ Phase 7's Colab wiring is a thin substitution, not a rewrite.
 | Field | Default | Notes |
 |---|---|---|
 | `timestep` | `0.002` | frozen since Phase 0, matches `biped_warp.xml` |
-| `integrator` | `"implicit"` | frozen since Phase 6.0 |
+| `integrator` | `"implicitfast"` | corrected 2026-07-11: `"implicit"` (frozen since Phase 6.0) is not a valid mjlab integrator string — mjlab's own integrator map only recognizes `"euler"`/`"implicitfast"`, confirmed by a live local-CPU mjlab install. `"implicitfast"` also matches `biped.xml`'s CPU-validated integrator. |
 | `decimation` | `10` | physics substeps per control step; `decimation * timestep == 0.02` (50 Hz control rate) is a hard invariant, tested |
 
 ## `BipedEnvCfg`

@@ -169,7 +169,7 @@ def build(OUT, torso_mass, torso_inertia):
 
 
 def add_warp_variant(OUT, torso_mass, torso_inertia):
-    """Build biped_warp.xml: implicit integrator + primitive collision geoms."""
+    """Build biped_warp.xml: implicitfast integrator + primitive collision geoms."""
     tree = ET.parse(RAW)
     mj = tree.getroot()
 
@@ -253,7 +253,16 @@ def add_warp_variant(OUT, torso_mass, torso_inertia):
                                       "rgba": "1 0 0 0"}))
     opt = ET.SubElement(mj, "option")
     opt.set("timestep", "0.002")
-    opt.set("integrator", "implicit")  # KEY DIFFERENCE: implicit instead of implicitfast
+    # 2026-07-11: switched from "implicit" to "implicitfast". Verified
+    # live (real mjlab 1.5.0 / mujoco-warp 3.10.0.1, installed and run on
+    # CPU) that mjlab's own integrator map (mjlab/sim/sim.py
+    # _INTEGRATOR_MAP) only recognizes "euler" and "implicitfast" -- there
+    # is no "implicit" option at all, so the prior setting would have
+    # raised KeyError('implicit') on Colab the first time an env was
+    # constructed. "implicitfast" also matches the CPU biped.xml's
+    # integrator, which is strictly better for sim-to-real/CPU-parity
+    # than the originally planned "implicit" fallback would have been.
+    opt.set("integrator", "implicitfast")
     vis = ET.SubElement(mj, "visual")
     ET.SubElement(vis, "headlight", {"diffuse": "0.6 0.6 0.6", "ambient": "0.3 0.3 0.3",
                                      "specular": "0 0 0"})
@@ -298,11 +307,11 @@ def add_warp_variant(OUT, torso_mass, torso_inertia):
 
     ET.indent(tree, space="  ")
     tree.write(OUT, encoding="utf-8", xml_declaration=False)
-    print(f"wrote {OUT}  (torso {torso_mass:.3f} kg, implicit integrator)")
+    print(f"wrote {OUT}  (torso {torso_mass:.3f} kg, implicitfast integrator)")
 
 
 for out, tmass, tinertia in VARIANTS:
     build(out, tmass, tinertia)
 
-# Add Warp variant (implicit integrator + primitive collisions)
+# Add Warp variant (implicitfast integrator + primitive collisions)
 add_warp_variant("models/mjcf/biped_warp.xml", TORSO_BASE + JETSON, "6e-4 5e-4 4e-4")

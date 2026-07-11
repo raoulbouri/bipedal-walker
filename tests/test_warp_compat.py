@@ -39,12 +39,16 @@ def test_warp_structure():
 
 
 def test_warp_integrator():
-    """Verify implicit integrator and dt=0.002."""
+    """Verify implicitfast integrator and dt=0.002."""
     model = mujoco.MjModel.from_xml_path(WARP_MODEL)
 
-    # Integrator should be "implicit" (not "implicitfast")
-    assert model.opt.integrator == mujoco.mjtIntegrator.mjINT_IMPLICIT, \
-        f"Expected implicit integrator, got {model.opt.integrator}"
+    # Integrator should be "implicitfast": mjlab's real integrator map
+    # (mjlab/sim/sim.py _INTEGRATOR_MAP, confirmed live 2026-07-11 via a
+    # local CPU mjlab install) only recognizes "euler"/"implicitfast" --
+    # "implicit" isn't a valid option and would raise KeyError at env
+    # construction time.
+    assert model.opt.integrator == mujoco.mjtIntegrator.mjINT_IMPLICITFAST, \
+        f"Expected implicitfast integrator, got {model.opt.integrator}"
 
     # Timestep
     assert abs(model.opt.timestep - 0.002) < 1e-9, \

@@ -6,9 +6,66 @@ the *real* `mjlab` package. Every prior Phase 6/7 file (`entity.py`,
 `init_noise.py`, `domain_randomization.py`, `rl_cfg.py`, `config.py`)
 deliberately stayed a **pure-Python mirror** of the mjlab API shape,
 testable on the Mac without a GPU. `mjlab_task.py` is the translation
-layer from that mirror into real mjlab manager-API objects, and it
-**cannot be executed or unit-tested on the Mac** — there is no `mjlab`
-install here (Colab-only dependency, see Phase 7.0) and no GPU.
+layer from that mirror into real mjlab manager-API objects.
+
+**UPDATE 2026-07-11 — this file's claim that it "cannot be executed or
+unit-tested on the Mac" was WRONG.** `mjlab`, `mujoco-warp`, and
+`warp-lang` all ship real macOS ARM64 wheels on PyPI (`pip install
+mjlab` installs cleanly on macOS, no CUDA needed) — the earlier belief
+that Warp "excludes Darwin" referred to the *CUDA-enabled* build variant
+only, not the base package. Warp's macOS build runs its CPU backend
+(`wp.init()` reports `Devices: "cpu": "i386", CUDA not enabled in this
+build`), and mjlab constructs and steps real `ManagerBasedRlEnv`
+instances on that CPU backend without any special flag. **See "Local CPU
+testing" below** — this is now the standard way to validate any change
+to this file *before* burning a Colab session on it, and is how the
+three bugs listed under "RESOLVED" below were actually found and fixed
+(not guessed, not found in Colab).
+
+## Local CPU testing (works — do this before every Colab run)
+
+In a throwaway venv (never the Mac core `uv` env — `mjlab`/`torch`/
+`mujoco-warp` must stay out of `pyproject.toml`'s core deps per
+CLAUDE.md):
+
+```bash
+python3 -m venv /tmp/mjlab_cpu_test/.venv
+source /tmp/mjlab_cpu_test/.venv/bin/activate
+pip install mjlab   # installs mjlab, mujoco-warp, warp-lang, torch (CPU), rsl-rl-lib
+cd /path/to/biped   # this repo
+python3 -c "
+import sys, torch
+sys.path.insert(0, '.')
+import mjlab_biped.mjlab_task as biped_task
+print('Registered task:', biped_task.TASK_ID)
+
+env_cfg = biped_task.make_biped_env_cfg(num_envs=1)
+from mjlab.envs import ManagerBasedRlEnv
+env = ManagerBasedRlEnv(cfg=env_cfg, device='cpu')
+obs, extras = env.reset()
+print('actor obs shape:', obs['actor'].shape)
+print('critic obs shape:', obs['critic'].shape)
+assert torch.isfinite(obs['actor']).all()
+assert torch.isfinite(obs['critic']).all()
+zero_action = torch.zeros(1, 6, device=obs['actor'].device)
+obs, reward, terminated, truncated, extras = env.step(zero_action)
+print('post-step reward:', reward)
+print('Smoke test passed.')
+"
+```
+
+First run takes ~25s (Warp JIT-compiles and caches its CPU kernels the
+first time each is used, in `~/Library/Caches/warp/`); subsequent runs
+are fast. This is the exact smoke-test cell from
+`notebooks/train_biped.ipynb` (cell 7-8) — running it locally first
+catches any `mjlab_task.py` API-guess bug for free, before it costs a
+Colab session. **What this does NOT cover:** actual GPU-parallel training
+(`num_envs` in the thousands), MuJoCo Warp's CUDA path specifically (the
+CPU backend is a different code path and could in principle diverge —
+low risk, not yet observed), and anything gated behind
+`torch.cuda.is_available()` in the notebook's own cells (skip straight
+to the task-registration/smoke-test cells locally, skip the `!nvidia-smi`
+and CUDA-assert cells).
 
 ## What was verified before writing it (2026-07-11, direct source reads)
 
@@ -42,27 +99,60 @@ install here (Colab-only dependency, see Phase 7.0) and no GPU.
 
 Ranked by how early they'll surface (a smoke-test import/reset should
 catch #1-3 immediately; #4-5 might only surface once training actually
-starts producing NaN/garbage):
+starts producing NaN/garbage). **Update 2026-07-11: #1-4 are now
+resolved** (found and fixed via local CPU testing, not Colab — see
+above); only #5 (history stacking) and #6 (CLI flags) remain open.
 
-1. **Raw `<sensor>` readout on an mjlab `Entity`.** `gyro()`,
-   `accelerometer()`, `foot_touch()` guess
-   `entity.data.sensor_data["<name>"]`. This is the single biggest
-   unknown — none of the fetched mjlab examples (cartpole, velocity,
-   manipulation) needed raw IMU/touch sensor access, so there was no
-   real example to copy. **First thing to check in Colab:** load
-   `biped_warp.xml` into a real `mjlab.entity.Entity`, step it once, and
-   run `dir(entity.data)` / inspect its actual attributes interactively
-   before trusting these three functions.
-2. **`projected_gravity_b`, `root_quat_w`, `root_lin_vel_w`,
-   `root_pos_w`, `com_pos_w` attribute names** on `entity.data`. These
-   follow the Isaac-Lab-style naming convention (`_w` = world frame,
-   `_b` = body frame) that mjlab's manager API is explicitly modeled
-   after, so they are a reasonable guess, but not confirmed against
-   mjlab's own source (the fetched files didn't need body-pose access
-   in a way that showed these specific names).
-3. **`env.action_manager.action` / `.prev_action`, `env.command_manager
-   .get_command("base_velocity")`.** Reasonable Isaac-Lab-convention
-   guesses, not confirmed against mjlab source directly.
+1. ~~**Raw `<sensor>` readout on an mjlab `Entity`.**~~ **RESOLVED
+   2026-07-11**, found via local CPU testing (see above), not Colab. The
+   guessed `entity.data.sensor_data["<name>"]` doesn't exist at all
+   (live `AttributeError: 'EntityData' object has no attribute
+   'sensor_data'`). Real mechanism: mjlab has a first-class `Sensor`
+   abstraction (`mjlab/sensor/`), and its `Scene._add_sensors()` method
+   **auto-discovers every raw `<sensor>` element already compiled into
+   the entity's own XML** (exactly the ones `postprocess.py` bakes into
+   `biped_warp.xml` — `torso_gyro`, `torso_acc`, `touch_l`, `touch_r`,
+   the 16 joint pos/vel sensors) and wraps each as
+   `BuiltinSensor.from_existing(name)`. No `BuiltinSensorCfg` needs to be
+   declared in Python for sensors that already exist in the XML — they
+   just show up. Read via `env.scene.sensors[key].data`, where `key` is
+   entity-prefixed (`"robot/torso_gyro"`, not `"torso_gyro"` — confirmed
+   via a direct `Scene(cfg.scene, device="cpu").sensors.keys()` dump).
+   `gyro()`, `accelerometer()`, `foot_touch()` in `mjlab_task.py` fixed
+   accordingly.
+2. ~~**`projected_gravity_b`, `root_quat_w`, `root_lin_vel_w`,
+   `root_pos_w`, `com_pos_w` attribute names.**~~ **RESOLVED 2026-07-11.**
+   Real `EntityData` (`mjlab/entity/data.py`) uses a `_link_` infix these
+   guesses dropped: `root_link_pos_w`, `root_link_quat_w`,
+   `root_link_lin_vel_w`, `root_link_ang_vel_w`. There is no
+   `projected_gravity_b` attribute at all — mjlab, unlike IsaacLab,
+   doesn't precompute it; `mjlab_task.py`'s `projected_gravity()` now
+   derives it the same way IsaacLab does internally: rotate world-frame
+   gravity into the body frame via `mjlab.utils.lab_api.math
+   .quat_apply_inverse(root_link_quat_w, [0,0,-1])` (that helper is real
+   and already used internally by `EntityData.root_com_lin_vel_b`).
+   Whole-robot CoM is `root_com_pos_w`, backed by MuJoCo's
+   `subtree_com` at the root body (the root's kinematic subtree is the
+   whole robot, since it's the floating base) — confirmed correct, not
+   a guess requiring a separate `subtreecom` XML sensor.
+3. ~~**`env.action_manager.action` / `.prev_action`,
+   `env.command_manager.get_command(...)`.**~~ **PARTIALLY RESOLVED
+   2026-07-11.** `env.action_manager.action`/`.prev_action` are real,
+   confirmed properties (`mjlab/managers/action_manager.py`) — no change
+   needed. `env.command_manager.get_command(name)` is also a real method,
+   but **`make_biped_env_cfg()` never passes a `commands=` dict to
+   `ManagerBasedRlEnvCfg`**, so at runtime `env.command_manager` is
+   mjlab's `NullCommandManager`, whose `get_command()` always returns
+   `None` — this would have broken observation concatenation the moment
+   `velocity_command()`/`command_tracking_fn()` ran, caught live via the
+   local smoke test. Since the current gate is explicitly zero-command
+   balance (`mjlab_biped/commands.py`'s `CommandRangeCfg()` defaults to
+   `(0.0, 0.0)` on all three axes), both functions were changed to return
+   a literal zero tensor — correct for this gate, but a real
+   `CommandTermCfg` (resampling `commands.py`'s existing numpy sampler
+   logic each episode) still needs wiring in before Phase 7's non-zero
+   velocity curriculum. Track that as the new open item here when that
+   curriculum work starts.
 4. ~~**`RslRlModelCfg`'s exact field names.**~~ **RESOLVED 2026-07-11**
    — this was the first UNVERIFIED item to actually bite: the original
    guess (`actor_hidden_dims`/`critic_hidden_dims`/
@@ -90,11 +180,20 @@ starts producing NaN/garbage):
    Phase 7.pre). CLAUDE.md's Sub-task 7.B already flagged this as a
    required Sonnet pre-verification item before 7.C, and it remains
    open — `ACTOR_OBS_GROUP` in `mjlab_task.py` currently has NO stacking
-   applied (single-frame 24-dim, not the frozen 120-dim spec). This is
-   the most consequential open item: **training must not start until
-   this is resolved**, because a single-frame actor makes the task an
-   unsolvable POMDP (see `docs/observation_spec.md`'s rationale for why
-   the stack exists at all).
+   applied. **Dimension correction 2026-07-11:** the live smoke test
+   reports the single-frame actor group as **28-dim, not 24-dim** as
+   previously assumed — `joint_pos_rel`/`joint_vel_rel` each return 8
+   values (6 actuated + 2 passive ankle joints), not 6, since mjlab's
+   built-in term reports every hinge joint on the entity, not just the
+   actuated ones. The frozen 120-dim (`24 * 5`) stacked-spec figure in
+   `docs/observation_spec.md`/`mjlab_biped/observations.py`'s
+   `STACKED_ACTOR_OBS_DIM` is now stale and needs reconciling against
+   this real 28-dim per-frame count (`28 * 5 = 140`) before stacking is
+   implemented. This is still the most consequential open item:
+   **training must not start until this is resolved**, because a
+   single-frame actor makes the task an unsolvable POMDP (see
+   `docs/observation_spec.md`'s rationale for why the stack exists at
+   all).
 6. **The exact `--env.*`/`--agent.*` CLI flag paths** for overriding
    `num_envs`, `max_iterations`, etc. from the command line (vs editing
    `mjlab_task.py`'s Python defaults directly, which always works
@@ -102,14 +201,16 @@ starts producing NaN/garbage):
 
 ## The Phase 7.C smoke-test-first plan (see the notebook)
 
-Because none of the above can be checked from the Mac, the notebook's
-first real cell after installing dependencies is a **minimal smoke
-test**: import `mjlab_biped.mjlab_task`, construct the env cfg, build
-one real mjlab env with `num_envs=1`, call `reset()`, call `step()` once
-with a zero action, and print the actor/critic observation shapes. This
-must produce `(1, 24)`-or-`(1, 120)` and `(1, 39)` (not crash, not NaN)
-*before* the real training cell runs. Any `AttributeError` here points
-directly at one of the UNVERIFIED items above — fix that specific
+This can now be (and should be) run locally first — see "Local CPU
+testing" above. The notebook's first real cell after installing
+dependencies is the same **minimal smoke test**: import
+`mjlab_biped.mjlab_task`, construct the env cfg, build one real mjlab env
+with `num_envs=1`, call `reset()`, call `step()` once with a zero action,
+and print the actor/critic observation shapes. As of 2026-07-11 this
+produces `(1, 28)` (actor, single-frame — see item #5's dimension
+correction) and `(1, 43)` (critic) locally, not crashing, no NaN
+*before* the real training cell runs on Colab. Any `AttributeError` here
+points directly at one of the UNVERIFIED items above — fix that specific
 function, re-run the smoke test, repeat, rather than debugging inside a
 multi-hour training run.
 

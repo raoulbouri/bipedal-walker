@@ -103,7 +103,7 @@ class TestEntityConfiguration:
 
         # Frozen from Phase 2 validation
         assert cfg.timestep == 0.002
-        assert cfg.integrator == "implicit"
+        assert cfg.integrator == "implicitfast"
 
         # Frozen control rate (50 Hz)
         assert cfg.control_dt == 0.02
@@ -248,10 +248,11 @@ class TestModelSpecification:
             f"config expects {cfg.timestep}"
         )
 
-        # Integrator: implicit = 1
-        assert model.opt.integrator == mujoco.mjtIntegrator.mjINT_IMPLICIT, (
+        # Integrator: implicitfast (corrected 2026-07-11 -- "implicit" is
+        # not a valid mjlab integrator string, see test_warp_compat.py)
+        assert model.opt.integrator == mujoco.mjtIntegrator.mjINT_IMPLICITFAST, (
             f"Integrator mismatch: model has {model.opt.integrator}, "
-            f"expected {mujoco.mjtIntegrator.mjINT_IMPLICIT} (implicit)"
+            f"expected {mujoco.mjtIntegrator.mjINT_IMPLICITFAST} (implicitfast)"
         )
 
     def test_sensor_count(self, model_path):
