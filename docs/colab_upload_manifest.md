@@ -117,7 +117,7 @@ Colab training.
 
 | Path | Purpose |
 |---|---|
-| `models/mjcf/biped_warp.xml` | The Warp-compatible model (implicit integrator, primitive collisions, Phase 6.0) that `mjlab.MjSpec.from_file(...)` loads. |
+| `models/mjcf/biped_warp.xml` | The Warp-compatible model (`implicitfast` integrator, full mesh collision -- physically identical to `biped.xml` as of 2026-07-13, see docs/warp_model.md) that `mjlab.MjSpec.from_file(...)` loads. |
 | `meshes/stl/*.stl` | The 13 mesh assets `biped_warp.xml` references by relative path. |
 | `mjlab_biped/` | The task package: robot entity, observation/reward/termination/command/DR managers, env config assembly, and (once 7.B lands) the RSL-RL runner config. This is what gets wired into mjlab's real `register_mjlab_task`. |
 | `requirements-colab.txt` | Colab pip-install pins (`mjlab`, `rsl-rl-lib`; deliberately no `torch` pin, see Phase 7.0). |

@@ -26,10 +26,11 @@ mjlab_biped/
 ## Model
 
 - **biped_warp.xml:** MuJoCo Warp-compatible MJCF variant (Phase 6.0)
-  - Integrator: `implicit` (Warp-compatible, not the CPU `implicitfast`)
-  - Collision: primitive proxies for non-foot bodies, mesh for feet
+  - Integrator: `implicitfast` (matches the CPU `biped.xml` exactly, corrected 2026-07-11)
+  - Collision: full mesh collision throughout (matches `biped.xml` exactly, corrected 2026-07-13 -- previously primitive proxies for non-foot bodies)
   - Physics: timestep 0.002 s, control rate 50 Hz (10 physics steps/control)
   - Total mass: 0.784 kg (with Jetson Nano), 0.604 kg (without)
+  - As of 2026-07-13, `biped_warp.xml` is physically identical to `biped.xml` -- verified via bit-identical passive-drop trajectories, see docs/warp_model.md.
 
 ## Actuators
 
