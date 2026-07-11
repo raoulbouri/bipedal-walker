@@ -1,0 +1,5 @@
+# Colab-only training dependencies for Phase 7 (mjlab + RSL-RL PPO on GPU).
+# torch is intentionally NOT pinned here - Colab's runtime already ships a
+# CUDA-matched torch, and pinning here risks conflicting with it.
+mjlab>=1.4.0
+rsl-rl-lib>=5.4.0

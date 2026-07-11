@@ -18,6 +18,10 @@ dev = [
     "black>=23.0",
     "ruff>=0.1.0",
 ]
+colab = [
+    "mjlab>=1.4.0",
+    "rsl-rl-lib>=5.4.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
