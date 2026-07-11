@@ -8,13 +8,13 @@ import pytest
 
 from mjlab_biped.config import BipedEnvCfg, make_play_env_cfg
 from mjlab_biped.local_env import BipedLocalEnv
-from mjlab_biped.observations import ACTOR_OBS_DIM
+from mjlab_biped.observations import STACKED_ACTOR_OBS_DIM
 
 
 def test_reset_returns_finite_actor_obs():
     env = BipedLocalEnv(seed=0)
     obs = env.reset()
-    assert obs.shape == (ACTOR_OBS_DIM,)
+    assert obs.shape == (STACKED_ACTOR_OBS_DIM,)
     assert np.all(np.isfinite(obs))
 
 

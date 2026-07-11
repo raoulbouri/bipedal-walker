@@ -32,6 +32,9 @@ from .observations import (
     ACTOR_TERM_NAMES,
     CRITIC_TERM_NAMES,
     ACTOR_SENSOR_WHITELIST,
+    ObsHistory,
+    ACTOR_HISTORY_LEN,
+    STACKED_ACTOR_OBS_DIM,
 )
 from .commands import CommandRangeCfg, sample_command
 from .init_noise import InitNoiseCfg, sample_init_state, apply_init_state
@@ -75,6 +78,9 @@ __all__ = [
     "ACTOR_TERM_NAMES",
     "CRITIC_TERM_NAMES",
     "ACTOR_SENSOR_WHITELIST",
+    "ObsHistory",
+    "ACTOR_HISTORY_LEN",
+    "STACKED_ACTOR_OBS_DIM",
     "CommandRangeCfg",
     "sample_command",
     "InitNoiseCfg",

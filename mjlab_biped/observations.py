@@ -1,10 +1,20 @@
 """
-Observation manager for the biped RL environment (Phase 6.B).
+Observation manager for the biped RL environment (Phase 7.pre, obs spec v1).
 
 Builds the actor (deployment-available) and critic (privileged, training-
 only) observation vectors per the frozen spec in `docs/observation_spec.md`.
 Do not modify term order/dims here without updating that spec doc and
 bumping a spec version — the ordering is a golden-tested invariant.
+
+v1 asymmetry (see docs/observation_spec.md and MEMORY.md's 2026-07-11
+"Phase 7 plan v4" entry for full rationale): the real robot has no
+orientation estimate (no EKF/sensor fusion) and no foot-contact hardware,
+so the actor no longer computes `projected_gravity` or `foot_touch` at
+all — those terms moved to the critic (privileged, training-only) group.
+Because a single frame's raw gyro (angular *velocity*, not angle) can't
+recover orientation, the actor's per-frame 24-dim observation is stacked
+into a 5-frame history (`ObsHistory`) so the policy can integrate gyro
+itself over time.
 
 This module is pure Python + numpy (no mjlab/torch imports — those are
 Colab-only per CLAUDE.md, not in Mac core deps).
@@ -20,14 +30,14 @@ import numpy as np
 ACTOR_TERM_NAMES = (
     "joint_pos_rel",
     "joint_vel_rel",
-    "projected_gravity",
     "gyro",
-    "foot_touch",
     "previous_action",
     "velocity_command",
 )
 
 CRITIC_TERM_NAMES = ACTOR_TERM_NAMES + (
+    "projected_gravity",
+    "foot_touch",
     "accelerometer",
     "base_linvel",
     "base_height",
@@ -38,8 +48,14 @@ CRITIC_TERM_NAMES = ACTOR_TERM_NAMES + (
 # Dimension constants
 # ---------------------------------------------------------------------------
 
-ACTOR_OBS_DIM = 29
+ACTOR_OBS_DIM = 24
 CRITIC_OBS_DIM = 39
+
+# History stacking (v1): the actor sees ACTOR_HISTORY_LEN raw per-frame
+# observations concatenated oldest -> newest, so it can integrate gyro
+# into an implicit orientation estimate itself.
+ACTOR_HISTORY_LEN = 5
+STACKED_ACTOR_OBS_DIM = ACTOR_OBS_DIM * ACTOR_HISTORY_LEN
 
 # ---------------------------------------------------------------------------
 # Sensor name ordering for the actuated joints (spec table term 1/2)
@@ -58,10 +74,7 @@ ACTOR_SENSOR_WHITELIST = frozenset(
     _POS_SENSOR_NAMES
     + _VEL_SENSOR_NAMES
     + (
-        "torso_quat",  # consumed only to derive projected_gravity, never exposed raw
         "torso_gyro",
-        "touch_l",
-        "touch_r",
     )
 )
 
@@ -106,11 +119,13 @@ def build_actor_obs(
     velocity_command: np.ndarray,
 ) -> np.ndarray:
     """
-    Build the 29-dim actor observation vector.
+    Build the 24-dim single-frame actor observation vector.
 
     Reads only the whitelisted sensor keys from `sensors` (per
-    ACTOR_SENSOR_WHITELIST) — never `torso_acc`, `torso_pos`,
-    `torso_linvel`, `torso_angvel`, and never computes CoM.
+    ACTOR_SENSOR_WHITELIST) — never `torso_quat`, `touch_l`, `touch_r`,
+    `torso_acc`, `torso_pos`, `torso_linvel`, `torso_angvel`, and never
+    computes CoM. Callers driving a real episode should stack this
+    per-frame output via `ObsHistory` before feeding it to the policy.
 
     Args:
         sensors: dict of sensor_name -> np.ndarray, as returned by
@@ -119,13 +134,11 @@ def build_actor_obs(
         velocity_command: 3-element array, [vx, vy, yaw_rate].
 
     Returns:
-        A (29,) numpy array in the frozen term order.
+        A (24,) numpy array in the frozen term order.
     """
     joint_pos_rel = np.concatenate([np.atleast_1d(sensors[name]) for name in _POS_SENSOR_NAMES])
     joint_vel_rel = np.concatenate([np.atleast_1d(sensors[name]) for name in _VEL_SENSOR_NAMES])
-    projected_gravity = project_gravity(sensors["torso_quat"])
     gyro = np.atleast_1d(sensors["torso_gyro"])
-    foot_touch = np.concatenate([np.atleast_1d(sensors["touch_l"]), np.atleast_1d(sensors["touch_r"])])
     prev_action = np.atleast_1d(previous_action).astype(np.float64)
     vel_command = np.atleast_1d(velocity_command).astype(np.float64)
 
@@ -133,9 +146,7 @@ def build_actor_obs(
         [
             joint_pos_rel,
             joint_vel_rel,
-            projected_gravity,
             gyro,
-            foot_touch,
             prev_action,
             vel_command,
         ]
@@ -156,13 +167,15 @@ def build_critic_obs(
     """
     Build the 39-dim critic observation vector.
 
-    Equals build_actor_obs(...) (29 dims) concatenated with the privileged
-    terms: accelerometer, base_linvel, base_height, com (10 dims).
+    Equals build_actor_obs(...) (24 dims, single frame) concatenated with
+    the privileged terms: projected_gravity, foot_touch, accelerometer,
+    base_linvel, base_height, com (15 dims).
 
     Args:
         sensors: dict of sensor_name -> np.ndarray, as returned by
-            BipedSim.sensors(). Must contain torso_acc, torso_linvel,
-            torso_pos in addition to the actor whitelist.
+            BipedSim.sensors(). Must contain torso_quat, touch_l, touch_r,
+            torso_acc, torso_linvel, torso_pos in addition to the actor
+            whitelist.
         previous_action: 6-element array.
         velocity_command: 3-element array.
         com: 3-element array, whole-body center of mass (world frame),
@@ -173,14 +186,48 @@ def build_critic_obs(
     """
     actor_obs = build_actor_obs(sensors, previous_action, velocity_command)
 
+    projected_gravity = project_gravity(sensors["torso_quat"])
+    foot_touch = np.concatenate([np.atleast_1d(sensors["touch_l"]), np.atleast_1d(sensors["touch_r"])])
     accelerometer = np.atleast_1d(sensors["torso_acc"]).astype(np.float64)
     base_linvel = np.atleast_1d(sensors["torso_linvel"]).astype(np.float64)
     base_height = np.atleast_1d(sensors["torso_pos"])[2:3].astype(np.float64)
     com_arr = np.atleast_1d(com).astype(np.float64)
 
-    obs = np.concatenate([actor_obs, accelerometer, base_linvel, base_height, com_arr])
+    obs = np.concatenate(
+        [actor_obs, projected_gravity, foot_touch, accelerometer, base_linvel, base_height, com_arr]
+    )
 
     if obs.shape != (CRITIC_OBS_DIM,):
         raise ValueError(f"critic obs shape mismatch: got {obs.shape}, expected ({CRITIC_OBS_DIM},)")
 
     return obs
+
+
+class ObsHistory:
+    """Fixed-length history stack of raw per-frame actor observations.
+    Pure numpy ring buffer, oldest->newest concatenation. NOT a filter -
+    the policy network does its own temporal integration over this stack.
+    See docs/observation_spec.md and CLAUDE.md Phase 7 v4 for why."""
+
+    def __init__(self, obs_dim: int = ACTOR_OBS_DIM, history_len: int = ACTOR_HISTORY_LEN):
+        self.obs_dim = obs_dim
+        self.history_len = history_len
+        self._buffer = np.zeros((history_len, obs_dim), dtype=np.float64)
+
+    def reset(self, first_obs: np.ndarray) -> np.ndarray:
+        """Fill the entire buffer with copies of first_obs (called on episode reset).
+        Returns the (history_len * obs_dim,) stacked observation."""
+        first_obs = np.asarray(first_obs, dtype=np.float64)
+        self._buffer[:] = first_obs[None, :]
+        return self._stacked()
+
+    def push(self, obs: np.ndarray) -> np.ndarray:
+        """Shift the buffer left by one frame and append obs as the newest.
+        Returns the (history_len * obs_dim,) stacked observation."""
+        obs = np.asarray(obs, dtype=np.float64)
+        self._buffer[:-1] = self._buffer[1:]
+        self._buffer[-1] = obs
+        return self._stacked()
+
+    def _stacked(self) -> np.ndarray:
+        return self._buffer.reshape(-1).copy()

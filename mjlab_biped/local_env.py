@@ -30,7 +30,7 @@ import mujoco
 
 from sim.biped_sim import BipedSim
 from .config import BipedEnvCfg
-from .observations import build_actor_obs, build_critic_obs, ACTOR_OBS_DIM
+from .observations import build_actor_obs, build_critic_obs, ObsHistory
 from .commands import sample_command
 from .init_noise import sample_init_state, apply_init_state
 from .domain_randomization import DomainRandomizer
@@ -74,6 +74,7 @@ class BipedLocalEnv:
         self.step_count = 0
         self.previous_action = np.zeros(_NUM_ACTUATED, dtype=np.float64)
         self.command = np.zeros(3, dtype=np.float64)
+        self._obs_history = ObsHistory()
 
     def reset(self) -> np.ndarray:
         """Reset to a (possibly domain-randomized, noise-perturbed) stand pose."""
@@ -97,7 +98,8 @@ class BipedLocalEnv:
         self.sim.data.qvel[:] = 0.0
         mujoco.mj_forward(self.sim.model, self.sim.data)
 
-        return self._get_obs()
+        single_frame_obs = self._get_single_frame_actor_obs()
+        return self._obs_history.reset(single_frame_obs)
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, bool, dict]:
         """
@@ -142,7 +144,8 @@ class BipedLocalEnv:
         )
 
         self.previous_action = action.copy()
-        obs = self._get_obs()
+        single_frame_obs = self._get_single_frame_actor_obs()
+        obs = self._obs_history.push(single_frame_obs)
 
         info = {
             "reward": reward,
@@ -156,7 +159,8 @@ class BipedLocalEnv:
         }
         return obs, reward, terminated, truncated, info
 
-    def _get_obs(self) -> np.ndarray:
+    def _get_single_frame_actor_obs(self) -> np.ndarray:
+        """Raw, unstacked 24-dim actor observation for the current state."""
         sensors = self.sim.sensors()
         return build_actor_obs(sensors, self.previous_action, self.command)
 

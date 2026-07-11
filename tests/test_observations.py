@@ -18,6 +18,9 @@ from mjlab_biped.observations import (
     ACTOR_TERM_NAMES,
     CRITIC_TERM_NAMES,
     ACTOR_SENSOR_WHITELIST,
+    ObsHistory,
+    ACTOR_HISTORY_LEN,
+    STACKED_ACTOR_OBS_DIM,
 )
 from sim.biped_sim import BipedSim
 
@@ -40,7 +43,7 @@ class TestShapes:
         prev_action = np.zeros(6)
         vel_command = np.zeros(3)
         obs = build_actor_obs(sensors, prev_action, vel_command)
-        assert obs.shape == (29,)
+        assert obs.shape == (24,)
 
     def test_critic_obs_shape(self):
         sim, sensors = _real_sensors()
@@ -60,9 +63,7 @@ class TestTermOrdering:
         assert ACTOR_TERM_NAMES == (
             "joint_pos_rel",
             "joint_vel_rel",
-            "projected_gravity",
             "gyro",
-            "foot_touch",
             "previous_action",
             "velocity_command",
         )
@@ -71,11 +72,11 @@ class TestTermOrdering:
         assert CRITIC_TERM_NAMES == (
             "joint_pos_rel",
             "joint_vel_rel",
-            "projected_gravity",
             "gyro",
-            "foot_touch",
             "previous_action",
             "velocity_command",
+            "projected_gravity",
+            "foot_touch",
             "accelerometer",
             "base_linvel",
             "base_height",
@@ -89,7 +90,15 @@ class TestTermOrdering:
 
 class TestPrivilegedLeakGuard:
     def test_whitelist_excludes_privileged_sensors(self):
-        for forbidden in ("torso_acc", "torso_pos", "torso_linvel", "torso_angvel"):
+        for forbidden in (
+            "torso_acc",
+            "torso_pos",
+            "torso_linvel",
+            "torso_angvel",
+            "torso_quat",
+            "touch_l",
+            "touch_r",
+        ):
             assert forbidden not in ACTOR_SENSOR_WHITELIST
 
     def test_actor_obs_does_not_need_privileged_keys(self):
@@ -97,14 +106,22 @@ class TestPrivilegedLeakGuard:
         — proves by construction that the actor path never reads them."""
         _, sensors = _real_sensors()
         stripped = dict(sensors)
-        for forbidden in ("torso_acc", "torso_pos", "torso_linvel", "torso_angvel"):
+        for forbidden in (
+            "torso_acc",
+            "torso_pos",
+            "torso_linvel",
+            "torso_angvel",
+            "torso_quat",
+            "touch_l",
+            "touch_r",
+        ):
             stripped.pop(forbidden, None)
 
         prev_action = np.zeros(6)
         vel_command = np.zeros(3)
         # Should not raise KeyError.
         obs = build_actor_obs(stripped, prev_action, vel_command)
-        assert obs.shape == (29,)
+        assert obs.shape == (24,)
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +177,7 @@ class TestLiveIntegration:
         assert not np.any(np.isnan(critic_obs))
         assert not np.any(np.isinf(critic_obs))
 
-        np.testing.assert_array_equal(critic_obs[:29], actor_obs)
+        np.testing.assert_array_equal(critic_obs[:24], actor_obs)
 
 
 # ---------------------------------------------------------------------------
@@ -169,8 +186,10 @@ class TestLiveIntegration:
 
 class TestDimensionConstants:
     def test_constants_match_spec(self):
-        assert ACTOR_OBS_DIM == 29
+        assert ACTOR_OBS_DIM == 24
         assert CRITIC_OBS_DIM == 39
+        assert ACTOR_HISTORY_LEN == 5
+        assert STACKED_ACTOR_OBS_DIM == 120
 
     def test_constants_match_real_builder_output(self):
         sim, sensors = _real_sensors()
@@ -183,3 +202,46 @@ class TestDimensionConstants:
 
         assert len(actor_obs) == ACTOR_OBS_DIM
         assert len(critic_obs) == CRITIC_OBS_DIM
+
+
+# ---------------------------------------------------------------------------
+# 7. ObsHistory (v1 actor history stacking)
+# ---------------------------------------------------------------------------
+
+class TestObsHistory:
+    def test_reset_fills_all_slots_with_first_frame(self):
+        rng = np.random.default_rng(0)
+        first_obs = rng.uniform(-1, 1, size=ACTOR_OBS_DIM)
+        hist = ObsHistory()
+        stacked = hist.reset(first_obs)
+        assert stacked.shape == (STACKED_ACTOR_OBS_DIM,)
+        np.testing.assert_array_equal(stacked, np.tile(first_obs, ACTOR_HISTORY_LEN))
+
+    def test_push_appends_newest_at_the_end(self):
+        rng = np.random.default_rng(1)
+        frame_a = rng.uniform(-1, 1, size=ACTOR_OBS_DIM)
+        frame_b = rng.uniform(-1, 1, size=ACTOR_OBS_DIM)
+        hist = ObsHistory()
+        hist.reset(frame_a)
+        stacked = hist.push(frame_b)
+        np.testing.assert_array_equal(stacked[-ACTOR_OBS_DIM:], frame_b)
+
+    def test_push_drops_oldest_frame(self):
+        rng = np.random.default_rng(2)
+        frame_a = rng.uniform(-1, 1, size=ACTOR_OBS_DIM)
+        frames = [rng.uniform(-1, 1, size=ACTOR_OBS_DIM) for _ in range(6)]
+        hist = ObsHistory()
+        hist.reset(frame_a)
+        stacked = None
+        for f in frames:
+            stacked = hist.push(f)
+        expected = np.concatenate(frames[1:])  # frame_2 .. frame_6, frame_1 evicted
+        np.testing.assert_array_equal(stacked, expected)
+
+    def test_stacked_shape_is_120(self):
+        rng = np.random.default_rng(3)
+        hist = ObsHistory()
+        stacked = hist.reset(rng.uniform(-1, 1, size=ACTOR_OBS_DIM))
+        assert stacked.shape == (STACKED_ACTOR_OBS_DIM,)
+        stacked = hist.push(rng.uniform(-1, 1, size=ACTOR_OBS_DIM))
+        assert stacked.shape == (STACKED_ACTOR_OBS_DIM,)
