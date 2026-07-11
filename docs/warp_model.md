@@ -6,14 +6,12 @@
 
 ## Key Differences from CPU Variant
 
-### Integrator: Implicit Instead of ImplicitFast
+### Integrator: ImplicitFast (corrected 2026-07-11 — previously wrongly set to "implicit")
 
-- **CPU variant (`biped.xml`)**: uses `implicit fast` integrator
-- **Warp variant (`biped_warp.xml`)**: uses `implicit` integrator
+- **CPU variant (`biped.xml`)**: uses `implicitfast` integrator
+- **Warp variant (`biped_warp.xml`)**: also uses `implicitfast` integrator (matches CPU exactly)
 
-**Reason:** MuJoCo Warp (GPU physics engine) does not support `implicitfast` at this time. The `implicit` integrator is Warp-compatible and provides stable physics, though settle behavior may differ slightly from the CPU variant due to the discretization characteristics of the two integrators.
-
-**Physics impact:** Both are 2nd-order integrators suitable for articulated robotics. The `implicit` variant may settle slightly higher (z_max ≈ 0.37m vs. CPU's z ≈ 0.20m) due to discretization differences, but this is expected and acceptable for an RL training variant. The settle is physically stable and deterministic.
+**Correction, 2026-07-11:** this doc previously stated the Warp variant used `"implicit"` because "MuJoCo Warp does not support `implicitfast`." That premise was never verified against a real mjlab install and turned out to be wrong: a live local CPU install of `mjlab`/`mujoco-warp` shows mjlab's own integrator map (`mjlab/sim/sim.py` `_INTEGRATOR_MAP`) only recognizes `"euler"` and `"implicitfast"` — `"implicit"` isn't a valid option at all and raises `KeyError('implicit')` the moment an env is constructed. This would have failed on Colab too, just later than the smoke test would have caught it. Fixed by switching `biped_warp.xml` to `"implicitfast"`, which is strictly better than the previous plan anyway: it now matches `biped.xml`'s CPU-validated integrator exactly, eliminating one whole axis of sim-to-sim drift between the Phase 0-4 validated model and the model actually trained against.
 
 ### Collision Geometry: Primitives vs. Full-Mesh
 
@@ -40,7 +38,7 @@ All Phases 0–4 backward-compatibility gates have been re-validated for `biped_
 
 ✓ **Structure**: 36 bodies (incl. worldbody), 15 DOF (7 floating base + 8 hinges), 6 actuators, 24 sensors  
 ✓ **Masses**: Total 0.784 kg (with Jetson Nano), identical to CPU variant  
-✓ **Integrator**: `implicit` at dt=0.002 s  
+✓ **Integrator**: `implicitfast` at dt=0.002 s (corrected 2026-07-11, was `implicit`)  
 ✓ **Static feasibility**: Stand keyframe achieves floor contact (ncon > 0)  
 ✓ **Settle stability**: 5 s passive drop produces finite trajectory, no NaN/Inf  
 ✓ **Actuators**: 6 position servos, kp=40.0, kv=10.0, forcerange=[-2.5, 2.5] N⋅m  
@@ -48,11 +46,11 @@ All Phases 0–4 backward-compatibility gates have been re-validated for `biped_
 
 ## Usage in Training
 
-`biped_warp.xml` is loaded by the Phase 6 mjlab environment (`mjlab_biped/`) and trained via RSL-RL on Colab GPU. A separate `biped_warp_no_jetson.xml` variant (sans 180 g Jetson mass) is used for domain-randomization spanning the on/off Jetson mass axis (Phase 7 robustness gate).
+`biped_warp.xml` is loaded by the Phase 6 mjlab environment (`mjlab_biped/`) and trained via RSL-RL on Colab GPU. There is **no separate `biped_warp_no_jetson.xml` file** (correcting a stale claim in an earlier version of this doc) — per Phase 6.C's design, the Jetson on/off mass axis is an in-memory `DomainRandomizer` toggle applied to the single `biped_warp.xml`, not a second model file.
 
 ## Known Differences from CPU Variant
 
-- Settle height: ~3.7× higher after 5 s passthrough (0.37 m vs. 0.20 m for CPU `implicitfast`)  
+- **Settle behavior under zero action (measured 2026-07-11, real mjlab env, post-integrator-fix):** starting from the `STAND_HEIGHT=0.2030` keyframe with the position servos holding a zero target, base height rises to a brief transient peak around ~0.376 m over the first ~10 control steps (a contact-resolution "pop" from the primitive collision proxies settling out initial interpenetration against the mesh-accurate CPU baseline), then decays and holds around ~0.247 m — stable, no NaN, no further drift observed over 60 steps. This is a real, still-open physics deviation from the CPU model (which settles near its own keyframe height) attributable to the primitive-vs-mesh collision proxy swap below, not the integrator (now identical to CPU). Revisit if it interferes with early training (e.g. as a confound in the height-termination reward).
 - Number of contacts: Mesh collision produces many small contacts (26+ at stand), while primitives produce fewer, larger contacts  
 - Foot contact fidelity: Identical (both use `foot_col_*` mesh geoms)  
 - Touch sensor accuracy: Identical (tied to foot mesh collision, not affected by torso/limb primitive swaps)  

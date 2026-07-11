@@ -193,7 +193,7 @@ def test_mjlab_biped_imports_without_sim_package():
 
 
 def test_notebook_bundle_unpack_cell_references_manifest():
-    """The notebook's bundle-unpack cell (index 4) must no longer carry the
+    """The notebook's bundle-unpack cell must no longer carry the
     TODO(7.A) marker and must reference docs/colab_upload_manifest.md."""
     with open(NOTEBOOK_PATH) as f:
         nb = json.load(f)
@@ -201,16 +201,34 @@ def test_notebook_bundle_unpack_cell_references_manifest():
     cells = nb["cells"]
     assert len(cells) >= 5, f"Expected at least 5 cells, found {len(cells)}"
 
-    bundle_cell = cells[4]
+    # Find the bundle-validation cell by looking for the distinctive check content
+    # (looking for "expected_paths" which is only in that cell's code)
+    bundle_cell = None
+    for cell in cells:
+        if cell["cell_type"] == "code":
+            source = cell["source"]
+            if isinstance(source, list):
+                source = "".join(source)
+            if "expected_paths" in source and "colab_upload_manifest.md" in source:
+                bundle_cell = cell
+                break
+
+    assert bundle_cell is not None, (
+        "Could not find the bundle-validation cell in the notebook. "
+        "Looking for a code cell containing 'expected_paths' and "
+        "'colab_upload_manifest.md'."
+    )
+
     source = bundle_cell["source"]
     if isinstance(source, list):
         source = "".join(source)
 
     assert "TODO(7.A)" not in source, (
-        "notebooks/train_biped.ipynb cell 4 still contains the TODO(7.A) "
-        "marker - it should have been replaced with the real bundle check."
+        "The bundle-validation cell in notebooks/train_biped.ipynb still "
+        "contains the TODO(7.A) marker - it should have been replaced with "
+        "the real bundle check."
     )
     assert "colab_upload_manifest.md" in source, (
-        "notebooks/train_biped.ipynb cell 4 does not reference "
-        "colab_upload_manifest.md by name."
+        "The bundle-validation cell in notebooks/train_biped.ipynb does not "
+        "reference colab_upload_manifest.md by name."
     )

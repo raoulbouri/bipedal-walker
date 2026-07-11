@@ -5,6 +5,25 @@ groups. This is the single source of truth other code (the observation
 builder, RL training config, and the deferred Phase 7.D BipedSim parity
 eval) must match exactly.
 
+**REAL vs MIRROR dimension discrepancy, found 2026-07-11 via a live local
+mjlab run (not guessed):** the dims below (24 actor/frame, 120 stacked, 39
+critic) describe `mjlab_biped/observations.py`'s pure-numpy **mirror**,
+used only by the deferred Phase 7.D macOS `BipedSim` eval path.
+`mjlab_task.py`'s **real** mjlab training-time env — the one actually
+used on Colab — reports **28 actor dims/frame, 140 stacked (`28 * 5`),
+43 critic dims**. The difference: mjlab's built-in `joint_pos_rel`/
+`joint_vel_rel` terms report *every* hinge joint on the entity (6
+actuated + 2 passive ankle joints = 8), not just the 6 actuated ones this
+doc/the mirror assumed. The extra 2+2=4 actor dims and 4 critic dims are
+the passive `foot_l`/`foot_r` joint pos/vel. **This is a known, deferred
+gap, not yet reconciled:** `observations.py`'s mirror was written before
+this was known and still reflects the original 6-joint assumption; fixing
+it (so Phase 7.D's parity eval can actually match Colab's real vector) is
+part of that deferred phase's remaining work, not a blocker for training
+itself — training runs entirely inside real mjlab and never touches this
+mirror. See `docs/mjlab_adapter_notes.md`'s item #5 resolution note for
+the live verification.
+
 ## Design decisions
 
 - **No orientation estimate in the actor (v1 change).** The real robot has

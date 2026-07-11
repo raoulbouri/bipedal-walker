@@ -46,6 +46,7 @@ from mjlab.entity import EntityArticulationInfoCfg, EntityCfg
 from mjlab.envs import ManagerBasedRlEnvCfg
 from mjlab.envs.mdp import joint_pos_rel, joint_vel_rel, time_out as mdp_time_out
 from mjlab.envs.mdp.actions import JointPositionActionCfg
+from mjlab.envs.mdp.events import reset_scene_to_default
 from mjlab.managers.event_manager import EventTermCfg
 from mjlab.managers.observation_manager import ObservationGroupCfg, ObservationTermCfg
 from mjlab.managers.reward_manager import RewardTermCfg
@@ -256,14 +257,23 @@ def fall_height_fn(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
 
 
 # ---------------------------------------------------------------------------
-# Observation groups. Actor = 5 terms per frame (24-dim, per
-# docs/observation_spec.md v1); history stacking to 120-dim is mjlab's
-# job via ObservationTermCfg's history-length mechanism -- UNVERIFIED
-# exactly how (native `history_length` kwarg vs a wrapper); this is the
-# explicit Sonnet pre-verification item CLAUDE.md's Sub-task 7.B flagged
-# for "before dispatching 7.C" -- check on Colab, then set the kwarg
-# below (currently a placeholder comment, not a real field, until
-# confirmed). Critic = single-frame 39-dim, all 11 terms, no stacking.
+# Observation groups. Actor = 5 terms per frame; single-frame dim is
+# 28 (not the originally assumed 24 -- joint_pos_rel/joint_vel_rel each
+# report all 8 hinge joints, 6 actuated + 2 passive ankles, not just the
+# 6 actuated ones; confirmed 2026-07-11 via a real local mjlab env).
+#
+# History stacking VERIFIED 2026-07-11 (local CPU mjlab install, not
+# guessed): mjlab's real ObservationGroupCfg has a native
+# `history_length: int | None` field (mjlab/managers/observation_manager
+# .py) -- a group-level override applied to every term in the group, with
+# `flatten_history_dim=True` (the default) giving shape
+# (num_envs, obs_dim * history_length). No custom wrapper or LSTM
+# fallback needed (items 1-2 of the fallback ladder in
+# docs/mjlab_adapter_notes.md are moot). Stacked actor dim is therefore
+# 28 * 5 = 140, not the originally frozen 120 -- see
+# mjlab_biped/observations.py's updated STACKED_ACTOR_OBS_DIM. Critic =
+# single-frame 43-dim, all 11 terms, no stacking (history_length=None,
+# the field's default, leaves per-term history_length=0 in effect).
 # ---------------------------------------------------------------------------
 
 _robot_scene_cfg = SceneEntityCfg(ROBOT_ENTITY_NAME)
@@ -275,11 +285,10 @@ ACTOR_OBS_GROUP = ObservationGroupCfg(
         "gyro": ObservationTermCfg(func=gyro, params={"asset_cfg": _robot_scene_cfg}),
         "previous_action": ObservationTermCfg(func=previous_action, params={}),
         "velocity_command": ObservationTermCfg(func=velocity_command, params={}),
-        # TODO(7.C, Colab-verify): add history_length=5 (or equivalent)
-        # once mjlab's actual stacking mechanism is confirmed empirically.
     },
     concatenate_terms=True,
     enable_corruption=False,  # noise/DR robustness is a later Phase 7 stage
+    history_length=5,
 )
 
 CRITIC_OBS_GROUP = ObservationGroupCfg(
@@ -358,7 +367,20 @@ def make_biped_env_cfg(num_envs: int = _env_cfg.scene.num_envs) -> ManagerBasedR
         scene=scene_cfg,
         observations={"actor": ACTOR_OBS_GROUP, "critic": CRITIC_OBS_GROUP},
         actions={"joint_pos": ACTION_CFG},
-        events={},  # DR/init-noise wiring deferred -- see docs/mjlab_adapter_notes.md
+        # CRITICAL FIX 2026-07-11: `events={}` (the original value here)
+        # silently disabled mjlab's own default `reset_scene_to_default`
+        # event -- the ONLY mechanism that applies `BIPED_ENTITY_CFG
+        # .init_state` (the stand-pose position/orientation/joint angles,
+        # entity.py's STAND_HEIGHT=0.2030) to the entity at reset. With
+        # events={}, every episode spawned at raw qpos=0 (z=0, not
+        # 0.203), instantly failed `fall_height_fn`'s height<0.15 check,
+        # and mjlab's `auto_reset=True` (the default) reset the env again
+        # on the very next call -- confirmed live via a local CPU run:
+        # `terminated=True` on literally every single step, forever, so
+        # no episode could ever run longer than one transition and no
+        # policy could ever learn anything. DR/init-noise (Phase 6.C)
+        # is still deferred -- this only restores the required default.
+        events={"reset_scene_to_default": EventTermCfg(func=reset_scene_to_default, mode="reset")},
         rewards=REWARD_TERMS,
         terminations=TERMINATION_TERMS,
         sim=SIM_CFG,
