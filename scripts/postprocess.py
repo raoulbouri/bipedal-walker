@@ -42,18 +42,6 @@ VARIANTS = [
     ("models/mjcf/biped_no_jetson.xml",  TORSO_BASE,          "2.1e-4 1.8e-4 1.4e-4"),
 ]
 
-# Collision proxy specs for Warp variant (mesh name → capsule/box/sphere params)
-COLLISION_PROXIES = {
-    "Motor": {"type": "capsule", "size": "0.015 0.05"},
-    "Upper_Leg_A": {"type": "capsule", "size": "0.012 0.08"},
-    "Upper_Leg_B": {"type": "capsule", "size": "0.012 0.08"},
-    "Tibia": {"type": "capsule", "size": "0.008 0.10"},
-    "Tube": {"type": "capsule", "size": "0.008 0.10"},
-    "Hip_Base": {"type": "box", "size": "0.02 0.05 0.02"},
-    "Hip_Joint_A": {"type": "sphere", "size": "0.01"},
-    "Hip_Joint_B": {"type": "sphere", "size": "0.01"},
-    "Part_1": {"type": "capsule", "size": "0.008 0.06"},
-}
 
 
 def build(OUT, torso_mass, torso_inertia):
@@ -169,7 +157,9 @@ def build(OUT, torso_mass, torso_inertia):
 
 
 def add_warp_variant(OUT, torso_mass, torso_inertia):
-    """Build biped_warp.xml: implicitfast integrator + primitive collision geoms."""
+    """Build biped_warp.xml: implicitfast integrator + whole-body mesh
+    collision (same as the CPU variants -- corrected 2026-07-13, see the
+    inline comment on the collision block below for why)."""
     tree = ET.parse(RAW)
     mj = tree.getroot()
 
@@ -220,34 +210,32 @@ def add_warp_variant(OUT, torso_mass, torso_inertia):
             "name": f"foot_site_{side}", "pos": vis.get("pos", "0 0 0"),
             "size": "0.03", "rgba": "0 0 0 0"}))
 
-    # Add primitive collision geoms for non-foot bodies (Warp variant only)
+    # Enable whole-body collision (same as the CPU variant's identical
+    # block in build() -- see CLAUDE.md for design rationale). Originally
+    # this used primitive collision proxies (capsule/box/sphere) instead,
+    # on the theory that MuJoCo Warp's mesh/CCD colliders were too
+    # memory-expensive at scale (Phase 6.0). Corrected 2026-07-13: that
+    # tradeoff was never actually necessary for this specific model (only
+    # ~33 small, simple bodies) and mujoco_warp's own test fixtures
+    # (test_data/aloha_pot/*.obj) confirm mesh collision genuinely works
+    # there, not just primitives in theory. Using the SAME mesh-on-mesh
+    # collision as biped.xml removes a real, previously undiagnosed
+    # sim-to-sim physics discrepancy between the training-time model and
+    # the CPU/deployment-representative model -- see
+    # docs/warp_model.md's settled-height finding this was likely
+    # contributing to. If mesh collision turns out too slow/memory-heavy
+    # at the intended num_envs on actual Colab GPU hardware (unverifiable
+    # from this Mac), the fallback is decomposed multi-primitive proxies
+    # per body, not reverting to single crude primitives.
     skip_bodies = set(FOOT_BODIES.keys())
     for b in mj.iter("body"):
         if b.get("name") in skip_bodies:
             continue
-        # Find visual mesh geoms and add collision proxies
         for g in b.findall("geom"):
             if g.get("group") == "1" and g.get("type") == "mesh":
-                mesh_name = g.get("mesh")
-                # Keep the visual mesh as-is, don't add collision to it
-                # (it remains contype=0, conaffinity=0)
-
-                # Add a primitive collision geom if we have a proxy for this mesh
-                if mesh_name in COLLISION_PROXIES:
-                    proxy = COLLISION_PROXIES[mesh_name]
-                    geom_dict = {
-                        "type": proxy["type"],
-                        "size": proxy["size"],
-                        "pos": g.get("pos", "0 0 0"),
-                        "quat": g.get("quat", "1 0 0 0"),
-                        "contype": "1",
-                        "conaffinity": "1",
-                        "friction": BODY_FRICTION,
-                        "rgba": "0.5 0.5 0.5 0.1",
-                        "group": "2"
-                    }
-                    # For non-capsule/non-box types, adjust size format
-                    b.append(ET.Element("geom", geom_dict))
+                g.set("contype", "1")
+                g.set("conaffinity", "1")
+                g.set("friction", BODY_FRICTION)
 
     pelvis.append(ET.Element("site", {"name": "imu", "pos": "0 0 0", "size": "0.005",
                                       "rgba": "1 0 0 0"}))
@@ -313,5 +301,6 @@ def add_warp_variant(OUT, torso_mass, torso_inertia):
 for out, tmass, tinertia in VARIANTS:
     build(out, tmass, tinertia)
 
-# Add Warp variant (implicitfast integrator + primitive collisions)
+# Add Warp variant (implicitfast integrator + whole-body mesh collision,
+# same as the CPU variants -- corrected 2026-07-13, was primitive proxies)
 add_warp_variant("models/mjcf/biped_warp.xml", TORSO_BASE + JETSON, "6e-4 5e-4 4e-4")

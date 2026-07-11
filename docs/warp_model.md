@@ -2,7 +2,7 @@
 
 ## Overview
 
-`biped_warp.xml` is a variant of the main `biped.xml` model, designed to be compatible with **MuJoCo Warp** (the GPU physics backend used for large-scale RL training on Google Colab). It uses the same mass distribution, sensors, and actuators as the CPU variant, but with two critical adaptations: a different physics integrator and primitive collision geometries instead of mesh collisions.
+`biped_warp.xml` is a variant of the main `biped.xml` model, designed to be compatible with **MuJoCo Warp** (the GPU physics backend used for large-scale RL training on Google Colab). As of 2026-07-13, it is **physically identical** to `biped.xml` — same integrator, same mesh-on-mesh collision, same masses, sensors, and actuators. There is no longer any intentional physics difference between the training-time model and the CPU/deployment-representative model (see "Collision Geometry" below for why the two variants exist as separate files at all despite being physically the same).
 
 ## Key Differences from CPU Variant
 
@@ -13,24 +13,18 @@
 
 **Correction, 2026-07-11:** this doc previously stated the Warp variant used `"implicit"` because "MuJoCo Warp does not support `implicitfast`." That premise was never verified against a real mjlab install and turned out to be wrong: a live local CPU install of `mjlab`/`mujoco-warp` shows mjlab's own integrator map (`mjlab/sim/sim.py` `_INTEGRATOR_MAP`) only recognizes `"euler"` and `"implicitfast"` — `"implicit"` isn't a valid option at all and raises `KeyError('implicit')` the moment an env is constructed. This would have failed on Colab too, just later than the smoke test would have caught it. Fixed by switching `biped_warp.xml` to `"implicitfast"`, which is strictly better than the previous plan anyway: it now matches `biped.xml`'s CPU-validated integrator exactly, eliminating one whole axis of sim-to-sim drift between the Phase 0-4 validated model and the model actually trained against.
 
-### Collision Geometry: Primitives vs. Full-Mesh
+### Collision Geometry: Mesh Throughout (corrected 2026-07-13 — previously primitive proxies)
 
 - **CPU variant**: All body geometry is full-resolution mesh collision (from `biped_raw.xml`, set via Stage 2's whole-body collision enablement)
-- **Warp variant**: Non-foot bodies use primitive collision geoms; foot bodies retain mesh collision
+- **Warp variant**: Now also full-resolution mesh collision on every body — identical to the CPU variant.
 
-**Collision proxy specifications:**
-| Mesh / Body | Primitive Type | Size Params |
-|---|---|---|
-| Motor (ST3215 servo) | Capsule | radius=0.015, length=0.05 |
-| Upper_Leg_A/B | Capsule | radius=0.012, length=0.08 |
-| Tibia (shank) | Capsule | radius=0.008, length=0.10 |
-| Tube (strut) | Capsule | radius=0.008, length=0.10 |
-| Hip_Base | Box | size=0.02 × 0.05 × 0.02 |
-| Hip_Joint_A/B | Sphere | radius=0.01 |
-| Part_1 (torso strut) | Capsule | radius=0.008, length=0.06 |
-| Foot, Foot_1 | Mesh | Foot.stl (unchanged) |
+**Correction, 2026-07-13:** this doc previously specified primitive collision proxies (capsule/box/sphere) for non-foot bodies, on the theory that "MuJoCo Warp's mesh collision support is memory-intensive and computationally expensive when scaling to thousands of parallel environments." That premise was never verified against real mujoco_warp — checked directly and found mujoco_warp's own test fixtures (`test_data/aloha_pot/*.obj`) use genuine mesh collision geoms, confirming it works there, not just in theory. For this specific model (only ~33 small, simple bodies), the primitive substitution introduced a real, previously undiagnosed physics discrepancy between the training-time model and the deployment-representative CPU model — discovered while evaluating a real trained checkpoint (`scripts/eval_checkpoint.py`): the policy survived far longer on the old primitive `biped_warp.xml` than on `biped.xml`, an unexplained divergence at the time.
 
-**Reason:** MuJoCo Warp's mesh collision support is memory-intensive and computationally expensive when scaling to thousands of parallel environments. Primitive collisions are much faster and more memory-efficient. Full-resolution mesh collision is retained *only* for the feet (`foot_col_l`, `foot_col_r`), which are critical for ground contact detection and touch sensor accuracy. All other bodies use approximating primitives, which are sufficient for collision detection and do not significantly impact the fidelity of body-to-body contact (internal chain contacts are largely excluded by MuJoCo's parent-child filtering anyway).
+**Fix:** `postprocess.py`'s `add_warp_variant()` now uses the exact same whole-body-collision logic as `build()` (flip `contype`/`conaffinity`/`friction` on the existing visual mesh geom, add no new geometry) instead of appending primitive proxy geoms. Verified this makes the two models produce **bit-identical passive-drop trajectories** over a full 5 s settle (`tests/test_warp_compat.py::test_warp_matches_cpu_settle`, max qpos/qvel diff < 1e-6, empirically exactly 0.0) — they are now the same physics, not just "close."
+
+**If this becomes a real memory/throughput problem on actual Colab GPU hardware at scale** (unverifiable from this Mac — Warp's CPU backend here confirms correctness, not GPU memory behavior at large `num_envs`), the fallback is **decomposed multi-primitive proxies per body** (several capsules per limb, not one crude one), not reverting to the previous single-primitive-per-body scheme.
+
+**Diagnostic finding from the checkpoint that motivated this fix (not resolved by the fix itself):** re-running `Model 499.pt` (trained under the old primitive-collision physics) against the corrected mesh-collision model shows it now falls *faster* (0.10s) than it did on its own old training environment (0.50s) — confirming the models are now physically consistent with each other (this checkpoint's behavior on the new `biped_warp.xml` and on `biped.xml` is identical), but also revealing that this specific checkpoint learned behavior tied to the old primitive dynamics that doesn't transfer even to its own corrected training environment. Re-training against the corrected `biped_warp.xml` is necessary before drawing conclusions about policy quality — this checkpoint was never trained under the physics it's now being evaluated against.
 
 ## Verified Properties
 
@@ -50,10 +44,9 @@ All Phases 0–4 backward-compatibility gates have been re-validated for `biped_
 
 ## Known Differences from CPU Variant
 
-- **Settle behavior under zero action (measured 2026-07-11, real mjlab env, post-integrator-fix):** starting from the `STAND_HEIGHT=0.2030` keyframe with the position servos holding a zero target, base height rises to a brief transient peak around ~0.376 m over the first ~10 control steps (a contact-resolution "pop" from the primitive collision proxies settling out initial interpenetration against the mesh-accurate CPU baseline), then decays and holds around ~0.247 m — stable, no NaN, no further drift observed over 60 steps. This is a real, still-open physics deviation from the CPU model (which settles near its own keyframe height) attributable to the primitive-vs-mesh collision proxy swap below, not the integrator (now identical to CPU). Revisit if it interferes with early training (e.g. as a confound in the height-termination reward).
-- Number of contacts: Mesh collision produces many small contacts (26+ at stand), while primitives produce fewer, larger contacts  
-- Foot contact fidelity: Identical (both use `foot_col_*` mesh geoms)  
-- Touch sensor accuracy: Identical (tied to foot mesh collision, not affected by torso/limb primitive swaps)  
+**None remaining as of 2026-07-13.** With both the integrator (fixed 2026-07-11) and collision geometry (fixed 2026-07-13) now unified, `biped_warp.xml` and `biped.xml` are physically identical — verified via bit-identical passive-drop trajectories (`test_warp_matches_cpu_settle`) and identical collision geom signatures (`test_warp_matches_cpu_collision`).
+
+**Historical note (no longer applicable, kept for context):** before the 2026-07-13 fix, zero-action rollouts on the old primitive-collision `biped_warp.xml` showed a transient height "pop" (0.203m → ~0.376m over ~10 steps) not present on `biped.xml` — a contact-resolution artifact of the primitive proxies. This is resolved by the mesh-collision fix, not merely documented around.
 
 ## Limitations and Deferred Items
 
