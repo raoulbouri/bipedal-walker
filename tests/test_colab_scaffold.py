@@ -194,10 +194,11 @@ def test_notebook_valid_and_cells_in_order():
     src3 = source_text(cells[3])
     assert "pip install -r requirements-colab.txt" in src3
 
-    # Cell 4: bundle unpack placeholder
+    # Cell 4: bundle unpack + manifest-backed sanity check (Phase 7.A)
     assert cells[4]["cell_type"] == "code"
     src4 = source_text(cells[4])
-    assert "TODO(7.A)" in src4
+    assert "TODO(7.A)" not in src4
+    assert "colab_upload_manifest.md" in src4
     assert "os.listdir" in src4
 
     # Cell 5: sanity imports

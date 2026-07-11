@@ -65,7 +65,17 @@ from .config import (
     register_mjlab_task,
     get_task_cfg,
 )
-from .local_env import BipedLocalEnv
+# BipedLocalEnv (local_env.py) is the macOS-only, single-env visualization
+# companion (see its own module docstring) - it imports `sim.biped_sim`,
+# the top-level `sim/` package, which is deliberately NOT part of the
+# minimal Colab training bundle (docs/colab_upload_manifest.md). Import it
+# lazily/optionally so `import mjlab_biped` still succeeds on Colab, where
+# only `mjlab_biped/` itself is present. On the Mac, where `sim/` sits
+# alongside `mjlab_biped/`, this import succeeds normally.
+try:
+    from .local_env import BipedLocalEnv
+except ModuleNotFoundError:
+    BipedLocalEnv = None
 
 __all__ = [
     "BipedEntityCfg",
