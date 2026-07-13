@@ -11,17 +11,33 @@ see `docs/observation_spec.md` and CLAUDE.md Phase 7 v4.
 
 - **True state `s_t`**: the full MuJoCo state (qpos, qvel, contacts).
   Exists only in sim; nothing is trained directly on it.
-- **Actor observation `o_t`**: 24 raw deployment-available dims per frame
-  (joint pos ×6, joint vel ×6, gyro ×3, previous action ×6, velocity
-  command ×3), history-stacked over H=5 frames → **120-dim actor input**
-  `x_t = [o_{t-4}, …, o_t]`.
+- **Actor observation `o_t`**: 28 raw deployment-available dims per frame
+  (joint pos ×**8** — mjlab's built-in `joint_pos_rel` reports every hinge
+  on the entity, i.e. the 6 actuated joints *and* the 2 passive ankles,
+  not just the 6 you command — joint vel ×8 likewise, gyro ×3, previous
+  action ×6, velocity command ×3), history-stacked over H=5 frames →
+  **140-dim actor input**. Corrected 2026-07-13 from an earlier
+  24/120 assumption that undercounted the joint terms — verified live
+  against a real mjlab env, not re-derived from spec.
+  **History stacking is per-TERM, not per-frame**: mjlab keeps a separate
+  circular buffer per observation term and concatenates each term's own
+  5-frame history, then concatenates terms — the real layout is
+  `[pos_hist(40), vel_hist(40), gyro_hist(15), prevact_hist(30),
+  cmd_hist(15)] = 140`, not `[frame_1(28), frame_2(28), …]`.
   Removing orientation makes this a **POMDP**: gyro is angular *velocity*,
   so absolute tilt is not instantaneously observable — the stack gives the
   network a 100 ms window to integrate it. (CS285 handles partial
   observability by conditioning π on observation histories; stacking is
   the simplest instance.)
-- **Critic observation `c_t`**: 39 privileged dims, single frame (actor's
-  24 + projected gravity, foot touch, accelerometer, base linvel, base
+  **`previous_action` carries a genuine one-step delay**: mjlab's
+  `previous_action()` returns `action_manager.prev_action`, not
+  `.action` — the frame at time `t` contains the action taken at `t-1`,
+  not the action about to be taken. This is a real property of the
+  training distribution (confirmed by tracing 10 steps of a live env),
+  not an implementation artifact to normalize away when reconstructing
+  or evaluating the observation elsewhere.
+- **Critic observation `c_t`**: 43 privileged dims, single frame (actor's
+  28 + projected gravity, foot touch, accelerometer, base linvel, base
   height, CoM). Near-Markovian, so no stacking. Training-only.
 - **Action `a_t ∈ R^6`**: position targets for the 6 servos (kp=40, kv=10
   frozen in the model — the policy commands *where*, the servo model
@@ -38,9 +54,21 @@ see `docs/observation_spec.md` and CLAUDE.md Phase 7 v4.
 
 | Network | Input | Body | Output |
 |---|---|---|---|
-| Actor π_θ | `x_t` (120) → EmpiricalNormalization | MLP [512, 256, 128], ELU | mean μ_θ(x_t) ∈ R^6 |
+| Actor π_θ | `x_t` (140) → EmpiricalNormalization | MLP [512, 256, 128], ELU | mean μ_θ(x_t) ∈ R^6 |
 | Actor log-std | — | free parameter vector (state-independent), init σ=1.0 | σ ∈ R^6 |
-| Critic V_φ | `c_t` (39) → EmpiricalNormalization | MLP [512, 256, 128], ELU | scalar V̂ |
+| Critic V_φ | `c_t` (43) → EmpiricalNormalization | MLP [512, 256, 128], ELU | scalar V̂ |
+
+EmpiricalNormalization divides by `(std + eps)`, `eps=1e-2` (RSL-RL's
+hardcoded default, not a configurable field anywhere in mjlab's config
+surface, and not itself stored in the checkpoint — only `_mean`/`_var`/
+`_std` are registered buffers). This matters in practice: `velocity_command`
+is literally `[0,0,0]` in every frame of every episode until a real
+`CommandTermCfg` is wired in, so its 15 history-stacked dims have exactly
+zero variance in a trained checkpoint's own normalizer statistics —
+normalizing with `(x-mean)/std` (no epsilon) divides by zero. Found this
+the hard way reconstructing the observation outside mjlab for
+`scripts/eval_checkpoint.py`: it produced a NaN action on the very first
+inference call until the `+eps` was added.
 
 Policy: diagonal Gaussian, π_θ(a|x) = N(μ_θ(x), diag(σ²)). During rollout
 actions are **sampled** (exploration); at eval/deployment the **mean** is
@@ -87,10 +115,17 @@ below is about choosing Ψ_t well.
 - **Truncation vs termination bootstrap:** on a **fall** (true absorbing
   failure) the future value is genuinely 0 — no bootstrap. On a
   **time-out** the episode was cut artificially and the state still has
-  value — RSL-RL bootstraps it (reward is augmented with γ·V_φ(c_t) when
-  `time_outs` is set). Conflating these teaches the policy that
-  surviving to the time limit is as bad as falling. This is exactly why
-  Phase 6.D kept `terminated` and `truncated` separate.
+  value. Read the real mechanism directly in `rsl_rl/algorithms/ppo.py`
+  rather than re-deriving it: the bootstrap is applied by **augmenting
+  the reward at storage time**, before the GAE backward pass ever runs —
+  `self.transition.rewards += self.gamma * (self.transition.values *
+  extras["time_outs"])` — not by a separate branch inside the GAE
+  recursion itself (which treats every `done` the same,
+  `next_is_not_terminal=0`, whether it was a fall or a time-out; the
+  reward already carries the correction by then). Conflating these
+  (omitting the reward augmentation) teaches the policy that surviving
+  to the time limit is as bad as falling — exactly why Phase 6.D kept
+  `terminated` and `truncated` separate.
 - **Value targets:** R_t = A_t + V_φ(c_t) (the TD(λ) return).
 - **Advantage normalization:** per batch, A ← (A − mean)/(std + ε).
   Stabilizes the scale of the policy loss across iterations.
@@ -131,10 +166,10 @@ Then the updated θ becomes θ_old, a fresh rollout is collected, repeat.
 
 | Stage | Actor input | Critic input | Uses |
 |---|---|---|---|
-| Rollout | 120-dim stack (normalized) | 39-dim privileged (normalized) | sample a_t; record log-prob and V̂ |
+| Rollout | 140-dim stack (normalized) | 43-dim privileged (normalized) | sample a_t; record log-prob and V̂ |
 | GAE | — | V̂ along trajectory | compute Â_t, R_t |
-| Update | 120-dim stack | 39-dim privileged | recompute log π_θ, V_φ on minibatches; losses in §5 |
-| Eval / deployment | 120-dim stack only | **never** | a = μ_θ(x), deterministic |
+| Update | 140-dim stack | 43-dim privileged | recompute log π_θ, V_φ on minibatches; losses in §5 |
+| Eval / deployment | 140-dim stack only | **never** | a = μ_θ(x), deterministic |
 
 ## 8. Why these choices (one line each)
 
@@ -148,6 +183,20 @@ Then the updated θ becomes θ_old, a fresh rollout is collected, repeat.
   signals that exist on the real robot.
 - **Gaussian with state-independent σ:** standard for locomotion;
   learned σ anneals naturally as the task is mastered.
+
+## Where to read the real code (not a re-derivation)
+
+- **Env-specific pieces** (observation/reward/action/termination
+  definitions, exact real dims/ordering): `mjlab_biped/mjlab_task.py`.
+- **Frozen hyperparameters**: `mjlab_biped/rl_cfg.py`.
+- **The actual PPO engine** — GAE, both losses, KL-adaptive LR — lives in
+  the installed `rsl_rl` package, not this repo:
+  `rsl_rl/algorithms/ppo.py`'s `compute_returns()` (GAE backward pass,
+  time-out reward augmentation) and `update()` (clipped surrogate, clipped
+  value loss, entropy bonus, adaptive LR), plus
+  `rsl_rl/storage/rollout_storage.py` (the minibatch generator). Reading
+  this directly is worth it — it's genuine CS285-lecture-level code, not
+  hidden behind abstraction.
 
 ## CS285 lecture map
 
