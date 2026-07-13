@@ -43,8 +43,8 @@ class RewardCfg:
     alive_bonus_weight: float = 1.0  # TODO(user): finalize in Phase 7
     upright_weight: float = 1.0  # TODO(user): finalize in Phase 7
     command_tracking_weight: float = 0.0  # TODO(user): finalize in Phase 7
-    control_effort_weight: float = -0.001  # TODO(user): finalize in Phase 7
-    action_rate_weight: float = -0.01  # TODO(user): finalize in Phase 7
+    control_effort_weight: float = -0.1  # TODO(user): finalize in Phase 7
+    action_rate_weight: float = -1  # TODO(user): finalize in Phase 7
 
 
 def alive_bonus(num_envs: int) -> np.ndarray:

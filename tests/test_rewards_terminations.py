@@ -196,8 +196,12 @@ def test_reward_cfg_defaults():
     assert cfg.alive_bonus_weight == 1.0
     assert cfg.upright_weight == 1.0
     assert cfg.command_tracking_weight == 0.0
-    assert cfg.control_effort_weight == -0.001
-    assert cfg.action_rate_weight == -0.01
+    # 2026-07-13: user-finalized (was -0.001/-0.01) to push harder against
+    # the choppy, high-magnitude actions observed in the iteration-499
+    # checkpoint's rollout -- see MEMORY.md for the visual evidence and
+    # discussion this followed from.
+    assert cfg.control_effort_weight == -0.1
+    assert cfg.action_rate_weight == -1
 
 
 def test_termination_cfg_defaults():
