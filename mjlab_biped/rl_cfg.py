@@ -72,7 +72,16 @@ class AlgorithmCfg:
     schedule: str = "adaptive"  # TODO(user): tune  (KL-based)
     gamma: float = 0.99  # TODO(user): tune
     lam: float = 0.95  # TODO(user): tune  (GAE lambda)
-    entropy_coef: float = 0.005  # TODO(user): tune
+    # Phase 7.W.2 (2026-07-14): raised 0.005 -> 0.02 (4x) after wandb
+    # evidence from the Walk-v0 run (aqqjlxn1) showed Policy/mean_std
+    # collapsing 1.0 -> 0.12 and Loss/entropy going +8.5 -> -4.1 by
+    # iteration ~100-150 -- exploration had essentially vanished before
+    # the policy ever needed to discover an actual stepping gait, letting
+    # it settle onto a near-stationary local optimum instead (see
+    # MEMORY.md's 2026-07-14 entry). A larger entropy bonus keeps the
+    # action distribution wider for longer, giving PPO more chances to
+    # sample motions that escape that optimum.
+    entropy_coef: float = 0.02  # TODO(user): tune
     desired_kl: float = 0.01  # TODO(user): tune
     max_grad_norm: float = 1.0  # TODO(user): tune
     value_loss_coef: float = 1.0  # TODO(user): tune

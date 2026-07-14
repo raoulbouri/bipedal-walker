@@ -39,8 +39,6 @@ below that touches sensor data has an inline `# UNVERIFIED:` comment.
 
 from __future__ import annotations
 
-import math
-
 import torch
 
 from mjlab.actuator.xml_actuator import XmlActuatorCfg
@@ -248,7 +246,20 @@ def upright_fn(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
     return 1.0 - 2.0 * (qx**2 + qy**2)
 
 
-COMMAND_TRACKING_STD = math.sqrt(0.25)  # matches mjlab's real G1/Go1 track_linear_velocity std
+COMMAND_TRACKING_STD = 0.25
+# Phase 7.W.2 (2026-07-14): sharpened from math.sqrt(0.25)=0.5 (the
+# G1/Go1 reference default) after wandb evidence from the Walk-v0 run
+# (aqqjlxn1) showed the policy converging to a near-stationary local
+# optimum: with std=0.5, standing still under a WALK_STAGE_1_RANGE
+# command (vx in [0,0.3], mean 0.15) already scores exp(-0.15**2/0.25)
+# ~= 0.91 of the max 1.0 kernel value -- Metrics/twist/error_vel_xy
+# plateaued at ~0.35-0.45 m/s (bigger than the entire commanded range)
+# from iteration ~90 through 300 and never improved, while
+# Policy/mean_std collapsed 1.0 -> 0.12 over the same window (see
+# MEMORY.md's 2026-07-14 entry for the full curve). At std=0.25, the
+# same v=0 vs. cmd=0.15 case scores exp(-0.15**2/0.0625) ~= 0.68 --
+# meaningfully worse, giving a stronger gradient toward actually
+# tracking the command before entropy collapses onto standing still.
 
 
 def command_tracking_fn(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:

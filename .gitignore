@@ -48,3 +48,6 @@ MEMORY.md
 # Temporary files
 *.tmp
 *.log
+
+# Environment variables
+.env    

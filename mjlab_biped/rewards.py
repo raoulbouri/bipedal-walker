@@ -68,7 +68,11 @@ def upright_term(torso_quat: np.ndarray) -> np.ndarray:
     return upright(torso_quat)
 
 
-COMMAND_TRACKING_STD = 0.5  # sqrt(0.25), matches mjlab_task.py's real track_linear_velocity std
+COMMAND_TRACKING_STD = 0.25
+# Phase 7.W.2 (2026-07-14): sharpened from 0.5 (sqrt(0.25), the G1/Go1
+# reference default) -- see mjlab_task.py's COMMAND_TRACKING_STD comment
+# for the full wandb-evidenced rationale (run aqqjlxn1: policy converged
+# to a near-stationary local optimum under the wider kernel).
 
 
 def command_tracking_term(
@@ -82,6 +86,7 @@ def command_tracking_term(
     penalty to mjlab's real reference exponential-kernel form
     (mjlab.tasks.velocity.mdp.rewards.track_linear_velocity, fetched
     from source) -- mirrors mjlab_task.py's real command_tracking_fn.
+    Phase 7.W.2: std sharpened to 0.25 (see COMMAND_TRACKING_STD above).
 
     Args:
         base_linvel: (N, 3) array, world-frame base linear velocity.

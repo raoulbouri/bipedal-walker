@@ -233,18 +233,28 @@ class ActorObsBuilder:
     joint_pos_rel/joint_vel_rel equal the raw pos_*/vel_* sensors directly
     for this model (mjlab's real versions subtract each joint's default
     pos/vel, which are 0 for every joint here -- verified against
-    entity.data.default_joint_pos/default_joint_vel). velocity_command is
-    always zero (no CommandTermCfg wired -- the Phase 7 zero-command
-    balance gate).
+    entity.data.default_joint_pos/default_joint_vel).
+
+    velocity_command (2026-07-14): now a caller-supplied [vx, vy, yaw]
+    constant, defaulting to zero. It was hardcoded to zero unconditionally
+    until this fix, which was correct ONLY for checkpoints trained on the
+    zero-command balance gate (Mjlab-Biped-Balance-v0/-Recovery-v0) -- a
+    checkpoint trained on Mjlab-Biped-Walk-v0 (nonzero command_manager
+    "twist" term during training) fed a constant zero command here will
+    correctly produce near-stationary behavior, since that IS the policy's
+    trained response to a zero command. This was an eval-harness gap, not
+    a training bug. See --command on the CLI.
     """
 
-    def __init__(self):
+    def __init__(self, command=(0.0, 0.0, 0.0)):
         self.pos_hist = TermHistory()
         self.vel_hist = TermHistory()
         self.gyro_hist = TermHistory()
         self.prevact_hist = TermHistory()
         self.cmd_hist = TermHistory()
         self._pending_prev_action = np.zeros(len(ACTION_JOINT_ORDER), dtype=np.float64)
+        self.command = np.asarray(command, dtype=np.float64)
+        assert self.command.shape == (3,), self.command.shape
 
     @staticmethod
     def _read_pos_vel_gyro(sensors):
@@ -260,7 +270,7 @@ class ActorObsBuilder:
         self.vel_hist.reset(vel)
         self.gyro_hist.reset(gyro)
         self.prevact_hist.reset(self._pending_prev_action)
-        self.cmd_hist.reset(np.zeros(3))
+        self.cmd_hist.reset(self.command)
         return self.stack()
 
     def step(self, sensors, action_just_taken):
@@ -269,7 +279,7 @@ class ActorObsBuilder:
         self.vel_hist.push(vel)
         self.gyro_hist.push(gyro)
         self.prevact_hist.push(self._pending_prev_action)  # one-step-delayed, see class docstring
-        self.cmd_hist.push(np.zeros(3))
+        self.cmd_hist.push(self.command)
         self._pending_prev_action = np.asarray(action_just_taken, dtype=np.float64).copy()
         return self.stack()
 
@@ -299,6 +309,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("checkpoint", help="Path to the RSL-RL actor checkpoint (.pt)")
     parser.add_argument("--model", default=MODEL_PATH, help=f"MJCF model path (default: {MODEL_PATH})")
+    parser.add_argument(
+        "--command", type=float, nargs=3, default=(0.0, 0.0, 0.0), metavar=("VX", "VY", "YAW_RATE"),
+        help="Constant velocity command fed to the policy every step (default: 0 0 0, i.e. "
+             "the balance gate). For a Mjlab-Biped-Walk-v0 checkpoint, e.g. --command 0.2 0 0 "
+             "to command 0.2 m/s forward -- WALK_STAGE_1_RANGE trained vx in [0.0, 0.3] with "
+             "vy/yaw held at 0, so stay within that range for in-distribution behavior.",
+    )
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parent.parent
@@ -312,9 +329,11 @@ def main():
     print(f"  Training iteration: {policy.iteration}")
     print(f"  Actor: {ACTOR_STACKED_DIM} -> {ACTOR_HIDDEN_DIMS} -> {len(ACTION_JOINT_ORDER)}")
 
+    print(f"  Velocity command: vx={args.command[0]}, vy={args.command[1]}, yaw_rate={args.command[2]}")
+
     sim = BipedSim(args.model, control_dt=0.02, suspended=False)
 
-    obs_builder = ActorObsBuilder()
+    obs_builder = ActorObsBuilder(command=tuple(args.command))
     state = {}
 
     def do_reset():

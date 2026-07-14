@@ -117,7 +117,9 @@ def test_algorithm_cfg_frozen_values():
     assert cfg.schedule == "adaptive"
     assert cfg.gamma == 0.99
     assert cfg.lam == 0.95
-    assert cfg.entropy_coef == 0.005
+    # Phase 7.W.2 (2026-07-14): raised 0.005 -> 0.02, see rl_cfg.py's
+    # AlgorithmCfg.entropy_coef comment for the wandb-evidenced rationale.
+    assert cfg.entropy_coef == 0.02
     assert cfg.desired_kl == 0.01
     assert cfg.max_grad_norm == 1.0
     assert cfg.value_loss_coef == 1.0
