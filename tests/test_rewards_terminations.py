@@ -81,7 +81,9 @@ def test_reward_terms_finite_and_shaped(n):
     ce = control_effort_term(actuator_torque)
     assert ce.shape == (n,)
     assert np.all(np.isfinite(ce))
-    assert np.all(ce <= 0.0)  # negative penalty term, zero only if torque is exactly zero
+    # 2026-07-14: raw positive magnitude now (sign-inversion fix) --
+    # penalty sign applied entirely via the negative RewardCfg weight.
+    assert np.all(ce >= 0.0)
 
     ar = action_rate_term(action, previous_action)
     assert ar.shape == (n,)

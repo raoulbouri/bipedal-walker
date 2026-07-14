@@ -260,16 +260,26 @@ def control_effort_fn(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
     # based -- a large target isn't costly if it takes little torque to
     # reach/hold. Matches mjlab's own reference `joint_torques_l2`
     # (mjlab/envs/mdp/rewards.py), which reads this exact field.
+    #
+    # 2026-07-14 fix: dropped the leading minus sign. mjlab's real
+    # joint_torques_l2 (fetched from source) and legged_gym's
+    # _reward_torques both return a RAW positive sum-of-squares; the
+    # penalty is applied entirely via the negative RewardTermCfg weight.
+    # This function previously negated here too, double-negating into a
+    # positive reward that grew with torque^2 -- see rewards.py's
+    # control_effort_term docstring and MEMORY.md for the full writeup.
     entity = env.scene[asset_cfg.name]
     torque = entity.data.actuator_force[:, asset_cfg.actuator_ids]
-    return -torch.sum(torque**2, dim=-1)
+    return torch.sum(torque**2, dim=-1)
 
 
 def action_rate_fn(env, asset_cfg: SceneEntityCfg = None) -> torch.Tensor:
+    # 2026-07-14 fix: dropped the leading minus sign -- see
+    # control_effort_fn's comment for the full root-cause writeup.
     del asset_cfg
     action = env.action_manager.action
     prev = env.action_manager.prev_action
-    return -torch.sum((action - prev) ** 2, dim=-1)
+    return torch.sum((action - prev) ** 2, dim=-1)
 
 
 def recovery_progress_fn(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
@@ -555,8 +565,8 @@ def make_biped_env_cfg(
     )
 
 
-def make_play_env_cfg() -> ManagerBasedRlEnvCfg:
-    return make_biped_env_cfg(num_envs=4)
+def make_play_env_cfg(recovery_enabled: bool = False) -> ManagerBasedRlEnvCfg:
+    return make_biped_env_cfg(num_envs=4, recovery_enabled=recovery_enabled)
 
 
 # ---------------------------------------------------------------------------
@@ -627,5 +637,22 @@ register_mjlab_task(
     TASK_ID,
     env_cfg=make_biped_env_cfg(),
     play_env_cfg=make_play_env_cfg(),
+    rl_cfg=MJLAB_RL_CFG,
+)
+
+# Second task id, 2026-07-14: recovery_enabled was previously only
+# reachable by calling make_biped_env_cfg(recovery_enabled=True) directly
+# in Python -- there was no way to select it from the train/play CLI, so
+# every run (including checkpoints the user had labeled "recovery")
+# silently trained on the standard balance task instead. This gives
+# recovery training its own explicit, CLI-selectable task id. Only start
+# training against this once a stable Mjlab-Biped-Balance-v0 checkpoint
+# exists -- see CLAUDE.md's Phase 7.R.4 note.
+RECOVERY_TASK_ID = "Mjlab-Biped-Recovery-v0"
+
+register_mjlab_task(
+    RECOVERY_TASK_ID,
+    env_cfg=make_biped_env_cfg(recovery_enabled=True),
+    play_env_cfg=make_play_env_cfg(recovery_enabled=True),
     rl_cfg=MJLAB_RL_CFG,
 )

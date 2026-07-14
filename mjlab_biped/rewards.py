@@ -85,7 +85,7 @@ def command_tracking_term(base_linvel: np.ndarray, velocity_command: np.ndarray)
 
 
 def control_effort_term(actuator_torque: np.ndarray) -> np.ndarray:
-    """Negative quadratic control-effort penalty, torque-based.
+    """Raw (positive) quadratic control-effort magnitude, torque-based.
 
     Phase 7.R.2 (2026-07-13): changed from penalizing the raw ACTION
     (position target) magnitude to penalizing actual actuator torque.
@@ -94,20 +94,36 @@ def control_effort_term(actuator_torque: np.ndarray) -> np.ndarray:
     wrong quantity. Matches mjlab's own `joint_torques_l2` reference
     (mjlab/envs/mdp/rewards.py), which reads `asset.data.actuator_force`.
 
+    2026-07-14 fix: dropped the internal leading minus sign. Verified
+    against mjlab's real joint_torques_l2 and legged_gym's _reward_torques
+    (both fetched from source) -- the reference convention is a RAW
+    positive sum-of-squares here, with the penalty sign applied entirely
+    via a negative RewardCfg weight. The previous version negated here
+    AND used a negative weight, double-negating this into a positive
+    reward that grew with torque^2 -- confirmed as the dominant cause of
+    the choppy/falling iteration-499 checkpoint (see MEMORY.md).
+
     Args:
         actuator_torque: (N, 6) array, real actuator force/torque (e.g.
             from `BipedSim.sensors()` or mjlab's `data.actuator_force` --
             NOT the policy's raw action).
     """
     actuator_torque = np.asarray(actuator_torque, dtype=np.float64)
-    return -np.sum(actuator_torque**2, axis=-1)
+    return np.sum(actuator_torque**2, axis=-1)
 
 
 def action_rate_term(action: np.ndarray, previous_action: np.ndarray) -> np.ndarray:
-    """Negative quadratic action-rate (anti-vibration) penalty."""
+    """Raw (positive) quadratic action-rate (anti-vibration) magnitude.
+
+    2026-07-14 fix: dropped the internal leading minus sign -- see
+    control_effort_term's docstring for the full root-cause writeup.
+    Verified against mjlab's real action_rate_l2 (fetched from source):
+    raw positive sum-of-squares, penalty sign applied via a negative
+    RewardCfg weight only.
+    """
     action = np.asarray(action, dtype=np.float64)
     previous_action = np.asarray(previous_action, dtype=np.float64)
-    return -np.sum((action - previous_action) ** 2, axis=-1)
+    return np.sum((action - previous_action) ** 2, axis=-1)
 
 
 def compute_reward(
