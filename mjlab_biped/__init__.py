@@ -57,6 +57,15 @@ from .terminations import (
     fall,
     time_out,
 )
+from .recovery import (
+    RecoveryCfg,
+    recovery_progress_term,
+    FallenPoseSampleCfg,
+    sample_fallen_pose,
+    FALLEN_POSE_RANGE,
+    FALLEN_JOINT_POSITION_RANGE,
+    RECOVERY_RESET_PROB,
+)
 from .config import (
     SceneCfg,
     SimCfg,
@@ -116,6 +125,13 @@ __all__ = [
     "fall_height",
     "fall",
     "time_out",
+    "RecoveryCfg",
+    "recovery_progress_term",
+    "FallenPoseSampleCfg",
+    "sample_fallen_pose",
+    "FALLEN_POSE_RANGE",
+    "FALLEN_JOINT_POSITION_RANGE",
+    "RECOVERY_RESET_PROB",
     "SceneCfg",
     "SimCfg",
     "BipedEnvCfg",

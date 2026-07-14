@@ -53,7 +53,8 @@ def _random_finite_state(rng, n):
     velocity_command = rng.normal(size=(n, 3))
     action = rng.normal(size=(n, 6))
     previous_action = rng.normal(size=(n, 6))
-    return quat, base_height, base_linvel, velocity_command, action, previous_action
+    actuator_torque = rng.uniform(-2.5, 2.5, size=(n, 6))  # within the real +-2.5 N*m actuator limit
+    return quat, base_height, base_linvel, velocity_command, action, previous_action, actuator_torque
 
 
 # ---------------------------------------------------------------------------
@@ -63,7 +64,7 @@ def _random_finite_state(rng, n):
 @pytest.mark.parametrize("n", [1, 4])
 def test_reward_terms_finite_and_shaped(n):
     rng = np.random.default_rng(42)
-    quat, base_height, base_linvel, velocity_command, action, previous_action = _random_finite_state(rng, n)
+    quat, base_height, base_linvel, velocity_command, action, previous_action, actuator_torque = _random_finite_state(rng, n)
 
     ab = alive_bonus(n)
     assert ab.shape == (n,)
@@ -77,16 +78,17 @@ def test_reward_terms_finite_and_shaped(n):
     assert ct.shape == (n,)
     assert np.all(np.isfinite(ct))
 
-    ce = control_effort_term(action)
+    ce = control_effort_term(actuator_torque)
     assert ce.shape == (n,)
     assert np.all(np.isfinite(ce))
+    assert np.all(ce <= 0.0)  # negative penalty term, zero only if torque is exactly zero
 
     ar = action_rate_term(action, previous_action)
     assert ar.shape == (n,)
     assert np.all(np.isfinite(ar))
 
     cfg = RewardCfg()
-    total = compute_reward(cfg, quat, base_linvel, velocity_command, action, previous_action)
+    total = compute_reward(cfg, quat, base_linvel, velocity_command, action, previous_action, actuator_torque)
     assert total.shape == (n,)
     assert np.all(np.isfinite(total))
 
@@ -196,12 +198,15 @@ def test_reward_cfg_defaults():
     assert cfg.alive_bonus_weight == 1.0
     assert cfg.upright_weight == 1.0
     assert cfg.command_tracking_weight == 0.0
-    # 2026-07-13: user-finalized (was -0.001/-0.01) to push harder against
-    # the choppy, high-magnitude actions observed in the iteration-499
-    # checkpoint's rollout -- see MEMORY.md for the visual evidence and
-    # discussion this followed from.
-    assert cfg.control_effort_weight == -0.1
-    assert cfg.action_rate_weight == -1
+    # Phase 7.R.2 (2026-07-13): the first retune (-0.1/-1, briefly
+    # committed) turned out 10-100x too aggressive vs. real references
+    # (mjlab's own G1/Go1 action_rate_l2=-0.1 for the identical formula;
+    # legged_gym/ANYmal torques=-1e-5) and stopped the policy from
+    # learning to stay upright/alive at all -- see MEMORY.md for the
+    # full research writeup. control_effort is now torque-based (see
+    # control_effort_term), not action-magnitude-based.
+    assert cfg.control_effort_weight == -1e-4
+    assert cfg.action_rate_weight == -0.1
 
 
 def test_termination_cfg_defaults():
@@ -235,16 +240,17 @@ def test_command_tracking_zero_weight_excluded_by_default():
     velocity_command = np.zeros((n, 3))  # zero command -> nonzero tracking error
     action = np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1]])
     previous_action = np.array([[0.0, 0.0, 0.0, 0.0, 0.0, 0.0]])
+    actuator_torque = np.array([[0.2, 0.2, 0.2, 0.2, 0.2, 0.2]])
 
     ct = command_tracking_term(base_linvel, velocity_command)
     assert not np.isclose(ct[0], 0.0)  # confirm the term itself is nonzero
 
     default_cfg = RewardCfg()
-    default_reward = compute_reward(default_cfg, quat, base_linvel, velocity_command, action, previous_action)
+    default_reward = compute_reward(default_cfg, quat, base_linvel, velocity_command, action, previous_action, actuator_torque)
 
     # Manually compute the reward with command_tracking_weight forced nonzero
     boosted_cfg = RewardCfg(command_tracking_weight=10.0)
-    boosted_reward = compute_reward(boosted_cfg, quat, base_linvel, velocity_command, action, previous_action)
+    boosted_reward = compute_reward(boosted_cfg, quat, base_linvel, velocity_command, action, previous_action, actuator_torque)
 
     assert not np.isclose(default_reward[0], boosted_reward[0])
 
@@ -252,7 +258,7 @@ def test_command_tracking_zero_weight_excluded_by_default():
     other_terms_sum = (
         default_cfg.alive_bonus_weight * alive_bonus(n)
         + default_cfg.upright_weight * upright_term(quat)
-        + default_cfg.control_effort_weight * control_effort_term(action)
+        + default_cfg.control_effort_weight * control_effort_term(actuator_torque)
         + default_cfg.action_rate_weight * action_rate_term(action, previous_action)
     )
     np.testing.assert_allclose(default_reward, other_terms_sum)

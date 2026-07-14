@@ -122,6 +122,11 @@ class BipedLocalEnv:
         action_b = action[None, :]
         prev_action_b = self.previous_action[None, :]
         command_b = self.command[None, :]
+        # Phase 7.R.2: control_effort is torque-based, not action-based.
+        # data.actuator_force is a standard MuJoCo MjData field (real
+        # applied actuator force), not a custom sensor -- matches mjlab's
+        # own data.actuator_force used by joint_torques_l2.
+        actuator_torque_b = self.sim.data.actuator_force[None, :].copy()
 
         reward = float(
             compute_reward(
@@ -131,6 +136,7 @@ class BipedLocalEnv:
                 command_b,
                 action_b,
                 prev_action_b,
+                actuator_torque_b,
             )[0]
         )
 

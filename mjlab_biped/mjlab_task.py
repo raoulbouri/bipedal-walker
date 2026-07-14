@@ -46,7 +46,12 @@ from mjlab.entity import EntityArticulationInfoCfg, EntityCfg
 from mjlab.envs import ManagerBasedRlEnvCfg
 from mjlab.envs.mdp import joint_pos_rel, joint_vel_rel, time_out as mdp_time_out
 from mjlab.envs.mdp.actions import JointPositionActionCfg
-from mjlab.envs.mdp.events import reset_scene_to_default
+from mjlab.envs.mdp.events import (
+    reset_scene_to_default,
+    reset_root_state_uniform,
+    reset_joints_by_offset,
+    resolve_env_ids,
+)
 from mjlab.managers.event_manager import EventTermCfg
 from mjlab.managers.observation_manager import ObservationGroupCfg, ObservationTermCfg
 from mjlab.managers.reward_manager import RewardTermCfg
@@ -66,12 +71,19 @@ from mjlab_biped.rewards import RewardCfg
 from mjlab_biped.terminations import TerminationCfg
 from mjlab_biped.rl_cfg import RunnerCfg as OurRunnerCfg
 from mjlab_biped.config import BipedEnvCfg as OurBipedEnvCfg
+from mjlab_biped.recovery import (
+    RecoveryCfg,
+    FALLEN_POSE_RANGE,
+    FALLEN_JOINT_POSITION_RANGE,
+    RECOVERY_RESET_PROB,
+)
 
 _biped = BipedEntityCfg()
 _reward_cfg = RewardCfg()
 _term_cfg = TerminationCfg()
 _rl_cfg = OurRunnerCfg()
 _env_cfg = OurBipedEnvCfg()
+_recovery_cfg = RecoveryCfg()
 
 ROBOT_ENTITY_NAME = "robot"
 
@@ -228,10 +240,14 @@ def command_tracking_fn(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
     return -torch.norm(lin_vel - cmd, dim=-1)
 
 
-def control_effort_fn(env, asset_cfg: SceneEntityCfg = None) -> torch.Tensor:
-    del asset_cfg
-    action = env.action_manager.action
-    return -torch.sum(action**2, dim=-1)
+def control_effort_fn(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    # Phase 7.R.2 (2026-07-13): torque-based, not action(position-target)-
+    # based -- a large target isn't costly if it takes little torque to
+    # reach/hold. Matches mjlab's own reference `joint_torques_l2`
+    # (mjlab/envs/mdp/rewards.py), which reads this exact field.
+    entity = env.scene[asset_cfg.name]
+    torque = entity.data.actuator_force[:, asset_cfg.actuator_ids]
+    return -torch.sum(torque**2, dim=-1)
 
 
 def action_rate_fn(env, asset_cfg: SceneEntityCfg = None) -> torch.Tensor:
@@ -239,6 +255,29 @@ def action_rate_fn(env, asset_cfg: SceneEntityCfg = None) -> torch.Tensor:
     action = env.action_manager.action
     prev = env.action_manager.prev_action
     return -torch.sum((action - prev) ** 2, dim=-1)
+
+
+def recovery_progress_fn(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    # Phase 7.R.3 (2026-07-13): direct translation of
+    # mjlab_biped.recovery.recovery_progress_term -- rewards upward
+    # vertical velocity (root_link_lin_vel_w[:,2], exactly d(height)/dt,
+    # no finite-difference/previous-state tracking needed) and improving
+    # orientation, gated to the SAME "fallen" definition
+    # fall_tilt_fn/fall_height_fn already use, so this never
+    # double-counts the existing upright/alive terms once the robot is
+    # reasonably upright/tall again. Only ever adds a bonus (both terms
+    # relu'd) -- falling/being upside-down is already penalized by the
+    # existing upright term and termination, not by this one.
+    entity = env.scene[asset_cfg.name]
+    height = entity.data.root_link_pos_w[:, 2]
+    linvel_z = entity.data.root_link_lin_vel_w[:, 2]
+    quat = entity.data.root_link_quat_w
+    qx, qy = quat[:, 1], quat[:, 2]
+    up = 1.0 - 2.0 * (qx**2 + qy**2)
+
+    in_recovery = (height < _term_cfg.height_threshold) | (up < _term_cfg.tilt_threshold)
+    progress = torch.clamp(linvel_z, min=0.0) + torch.clamp(up, min=0.0)
+    return torch.where(in_recovery, progress, torch.zeros_like(progress))
 
 
 # ---------------------------------------------------------------------------
@@ -318,7 +357,7 @@ REWARD_TERMS = {
     "alive_bonus": RewardTermCfg(func=alive_bonus_fn, weight=_reward_cfg.alive_bonus_weight, params={}),
     "upright": RewardTermCfg(func=upright_fn, weight=_reward_cfg.upright_weight, params={"asset_cfg": _robot_scene_cfg}),
     "command_tracking": RewardTermCfg(func=command_tracking_fn, weight=_reward_cfg.command_tracking_weight, params={"asset_cfg": _robot_scene_cfg}),
-    "control_effort": RewardTermCfg(func=control_effort_fn, weight=_reward_cfg.control_effort_weight, params={}),
+    "control_effort": RewardTermCfg(func=control_effort_fn, weight=_reward_cfg.control_effort_weight, params={"asset_cfg": _robot_scene_cfg}),
     "action_rate": RewardTermCfg(func=action_rate_fn, weight=_reward_cfg.action_rate_weight, params={}),
 }
 
@@ -329,16 +368,109 @@ TERMINATION_TERMS = {
 }
 
 # ---------------------------------------------------------------------------
+# Phase 7.R.3 (2026-07-13): recovery curriculum -- OPT-IN, gated behind
+# `make_biped_env_cfg(recovery_enabled=True)`. Default training
+# (recovery_enabled=False, the default) is byte-for-byte the same
+# REWARD_TERMS/TERMINATION_TERMS/events as before this sub-phase -- see
+# tests/test_mjlab_task_static.py's regression check.
+# ---------------------------------------------------------------------------
+
+
+def reset_biped_recovery_mix(env, env_ids) -> None:
+    """Mixed reset: RECOVERY_RESET_PROB fraction of resetting envs start
+    from a randomized fallen/toppled pose; the rest reset to the stand
+    keyframe as before (unchanged behavior). Every resetting env gets the
+    clean default baseline first (reset_scene_to_default sets joint
+    angles to 0 and the stand-height base pose -- reset_root_state_uniform
+    alone does not touch joint angles at all), then the "fallen" subset
+    has a full +-pi roll/pitch/yaw tumble and randomized joint angles
+    applied on top, using the exact same FALLEN_POSE_RANGE/
+    FALLEN_JOINT_POSITION_RANGE constants tested in
+    tests/test_recovery.py (single source of truth, mjlab_biped/recovery.py)."""
+    env_ids = resolve_env_ids(env, env_ids)
+    if len(env_ids) == 0:
+        return
+
+    reset_scene_to_default(env, env_ids)
+
+    mask = torch.rand(len(env_ids), device=env.device) < RECOVERY_RESET_PROB
+    fallen_ids = env_ids[mask]
+    if len(fallen_ids) == 0:
+        return
+
+    reset_root_state_uniform(
+        env,
+        fallen_ids,
+        pose_range=FALLEN_POSE_RANGE,
+        velocity_range=None,
+        asset_cfg=_robot_scene_cfg,
+    )
+    reset_joints_by_offset(
+        env,
+        fallen_ids,
+        position_range=FALLEN_JOINT_POSITION_RANGE,
+        velocity_range=(0.0, 0.0),
+        asset_cfg=_robot_scene_cfg,
+    )
+
+
+REWARD_TERMS_RECOVERY = dict(
+    REWARD_TERMS,
+    recovery_progress=RewardTermCfg(
+        func=recovery_progress_fn, weight=_recovery_cfg.weight, params={"asset_cfg": _robot_scene_cfg}
+    ),
+)
+
+# fall_tilt/fall_height are deliberately OMITTED here, not just
+# relaxed: a fallen reset already violates both by construction, so
+# either check would instantly re-terminate on the very next step --
+# the exact same class of bug as the events={} issue found 2026-07-11
+# (see CLAUDE.md Phase 7.R.3). time_out remains the only way a
+# recovery-stage episode ends.
+TERMINATION_TERMS_RECOVERY = {
+    "time_out": TerminationTermCfg(func=mdp_time_out, time_out=True, params={}),
+}
+
+# ---------------------------------------------------------------------------
 # Actions: 6 position-target actuators, matching entity.py's ActuatorConfig.
 # use_default_offset=False since our targets are absolute joint angles
 # (radians), not deltas from the stand-keyframe default pose.
 # ---------------------------------------------------------------------------
+
+# Phase 7.R.1 (2026-07-13): clip action targets to each joint's real
+# jnt_range, read directly from the compiled biped.xml/biped_warp.xml
+# (both share the same joint declaration order/limits -- verified
+# 2026-07-12). Without this, raw policy output is an unbounded Gaussian
+# mean fed straight to a position actuator -- the iteration-499 rollout
+# showed targets reaching >100 rad, far outside any physically
+# reachable joint angle, which is itself a major source of the choppy,
+# toppling motion documented in MEMORY.md's rollout-analysis entry.
+# mjlab applies `clip` (a real field on the base `ActionTermCfg`) via
+# `torch.clamp` after scale/offset in `BaseAction.process_actions` --
+# confirmed directly against mjlab 1.5.0's
+# `envs/mdp/actions/actions.py`. Keys match `actuator_names` above
+# (hip_roll_l/r, knee_l/r, ankle_l/r); values are each joint's
+# `model.jnt_range` in biped.xml (`mujoco.MjModel.from_xml_path(...)
+# .jnt_range`), NOT re-derived at import time here since `ACTION_CFG` is
+# built without ever needing to compile the model (see `_get_biped_spec`
+# above, which is lazy on purpose) -- `tests/test_action_clip.py`
+# re-verifies these numbers against the live-compiled model so drift is
+# caught if the URDF/pipeline ever changes the joint limits.
+ACTION_CLIP = {
+    "hip_roll_l": (-2.26893, 0.0872665),
+    "hip_roll_r": (-0.0872665, 2.26893),
+    "knee_l": (-1.39626, 1.39626),
+    "knee_r": (-1.39626, 1.39626),
+    "ankle_l": (-1.39626, 1.39626),
+    "ankle_r": (-1.39626, 1.39626),
+}
 
 ACTION_CFG = JointPositionActionCfg(
     entity_name=ROBOT_ENTITY_NAME,
     actuator_names=tuple(_biped.actuators.target_names),
     scale=1.0,
     use_default_offset=False,
+    clip=ACTION_CLIP,
 )
 
 
@@ -354,19 +486,30 @@ SIM_CFG = SimulationCfg(
 )
 
 
-def make_biped_env_cfg(num_envs: int = _env_cfg.scene.num_envs) -> ManagerBasedRlEnvCfg:
+def make_biped_env_cfg(
+    num_envs: int = _env_cfg.scene.num_envs, recovery_enabled: bool = False
+) -> ManagerBasedRlEnvCfg:
     """Build the training env cfg. `num_envs` overridable at train time
-    via `--env.scene.num-envs N` (tyro CLI, see docs/colab_upload_manifest.md)."""
+    via `--env.scene.num-envs N` (tyro CLI, see docs/colab_upload_manifest.md).
+
+    `recovery_enabled` (Phase 7.R.3, default False): swaps in the fallen-
+    pose-mix reset event, adds the `recovery_progress` reward term, and
+    DROPS the fall_tilt/fall_height terminations (a fallen reset already
+    violates both by construction -- see reset_biped_recovery_mix's
+    docstring for why they're omitted, not just relaxed). With the
+    default False, this function's output is unchanged from before this
+    sub-phase -- verified in tests/test_mjlab_task_static.py."""
     scene_cfg = SceneCfg(
         terrain=TerrainEntityCfg(terrain_type="plane"),
         entities={ROBOT_ENTITY_NAME: BIPED_ENTITY_CFG},
         num_envs=num_envs,
         env_spacing=2.0,
     )
-    return ManagerBasedRlEnvCfg(
-        scene=scene_cfg,
-        observations={"actor": ACTOR_OBS_GROUP, "critic": CRITIC_OBS_GROUP},
-        actions={"joint_pos": ACTION_CFG},
+    if recovery_enabled:
+        events = {"reset_biped_recovery_mix": EventTermCfg(func=reset_biped_recovery_mix, mode="reset")}
+        rewards = REWARD_TERMS_RECOVERY
+        terminations = TERMINATION_TERMS_RECOVERY
+    else:
         # CRITICAL FIX 2026-07-11: `events={}` (the original value here)
         # silently disabled mjlab's own default `reset_scene_to_default`
         # event -- the ONLY mechanism that applies `BIPED_ENTITY_CFG
@@ -380,9 +523,17 @@ def make_biped_env_cfg(num_envs: int = _env_cfg.scene.num_envs) -> ManagerBasedR
         # no episode could ever run longer than one transition and no
         # policy could ever learn anything. DR/init-noise (Phase 6.C)
         # is still deferred -- this only restores the required default.
-        events={"reset_scene_to_default": EventTermCfg(func=reset_scene_to_default, mode="reset")},
-        rewards=REWARD_TERMS,
-        terminations=TERMINATION_TERMS,
+        events = {"reset_scene_to_default": EventTermCfg(func=reset_scene_to_default, mode="reset")}
+        rewards = REWARD_TERMS
+        terminations = TERMINATION_TERMS
+
+    return ManagerBasedRlEnvCfg(
+        scene=scene_cfg,
+        observations={"actor": ACTOR_OBS_GROUP, "critic": CRITIC_OBS_GROUP},
+        actions={"joint_pos": ACTION_CFG},
+        events=events,
+        rewards=rewards,
+        terminations=terminations,
         sim=SIM_CFG,
         decimation=_biped.control_decimation,
         episode_length_s=_env_cfg.episode_length_s,
