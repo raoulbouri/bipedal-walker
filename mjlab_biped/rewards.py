@@ -68,20 +68,33 @@ def upright_term(torso_quat: np.ndarray) -> np.ndarray:
     return upright(torso_quat)
 
 
-def command_tracking_term(base_linvel: np.ndarray, velocity_command: np.ndarray) -> np.ndarray:
+COMMAND_TRACKING_STD = 0.5  # sqrt(0.25), matches mjlab_task.py's real track_linear_velocity std
+
+
+def command_tracking_term(
+    base_linvel: np.ndarray, velocity_command: np.ndarray, std: float = COMMAND_TRACKING_STD
+) -> np.ndarray:
     """
-    Negative xy linear-velocity tracking error (yaw-rate tracking deferred).
+    Exponential-kernel xy linear-velocity tracking reward (yaw-rate
+    tracking deferred). Bounded in [0, 1].
+
+    Phase 7.W.1 (2026-07-14): switched from a raw linear negative-norm
+    penalty to mjlab's real reference exponential-kernel form
+    (mjlab.tasks.velocity.mdp.rewards.track_linear_velocity, fetched
+    from source) -- mirrors mjlab_task.py's real command_tracking_fn.
 
     Args:
         base_linvel: (N, 3) array, world-frame base linear velocity.
         velocity_command: (N, 3) array, [vx, vy, yaw_rate].
+        std: kernel width (m/s).
 
     Returns:
-        (N,) array: -norm(base_linvel[:, :2] - velocity_command[:, :2]).
+        (N,) array: exp(-sum((base_linvel[:, :2] - velocity_command[:, :2])**2) / std**2).
     """
     base_linvel = np.asarray(base_linvel, dtype=np.float64)
     velocity_command = np.asarray(velocity_command, dtype=np.float64)
-    return -np.linalg.norm(base_linvel[:, :2] - velocity_command[:, :2], axis=-1)
+    error = np.sum((base_linvel[:, :2] - velocity_command[:, :2]) ** 2, axis=-1)
+    return np.exp(-error / std**2)
 
 
 def control_effort_term(actuator_torque: np.ndarray) -> np.ndarray:

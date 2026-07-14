@@ -36,7 +36,7 @@ from .observations import (
     ACTOR_HISTORY_LEN,
     STACKED_ACTOR_OBS_DIM,
 )
-from .commands import CommandRangeCfg, sample_command
+from .commands import CommandRangeCfg, sample_command, WALK_STAGE_1_RANGE
 from .init_noise import InitNoiseCfg, sample_init_state, apply_init_state
 from .domain_randomization import DomainRandomizationCfg, DomainRandomizer
 from .rl_cfg import RunnerCfg, ModelCfg, AlgorithmCfg, ACTION_DIM
@@ -103,6 +103,7 @@ __all__ = [
     "STACKED_ACTOR_OBS_DIM",
     "CommandRangeCfg",
     "sample_command",
+    "WALK_STAGE_1_RANGE",
     "InitNoiseCfg",
     "sample_init_state",
     "apply_init_state",

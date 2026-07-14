@@ -27,6 +27,19 @@ class CommandRangeCfg:
     yaw_rate_range: Tuple[float, float] = (0.0, 0.0)
 
 
+# Phase 7.W.1 (2026-07-14): first walking-curriculum stage, narrow
+# forward-only range. Single source of truth for the walk task's command
+# range -- mjlab_task.py imports this into mjlab's real
+# UniformVelocityCommandCfg.Ranges rather than hardcoding numbers there.
+# CommandRangeCfg()'s own bare default stays all-zero (relied on by
+# local_env.py, config.py's EnvCfg default, and test_events.py as the
+# balance-first gate) -- this is a separate named preset, not a change to
+# that default.
+WALK_STAGE_1_RANGE = CommandRangeCfg(
+    vx_range=(0.0, 0.3), vy_range=(0.0, 0.0), yaw_rate_range=(0.0, 0.0)
+)
+
+
 def sample_command(rng: np.random.Generator, cfg: CommandRangeCfg) -> np.ndarray:
     """
     Sample a velocity command [vx, vy, yaw_rate].

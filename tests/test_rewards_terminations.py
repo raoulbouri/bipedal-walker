@@ -238,7 +238,12 @@ def test_todo_markers_present_in_source():
 def test_command_tracking_zero_weight_excluded_by_default():
     n = 1
     quat = _batch(IDENTITY_QUAT, n)
-    base_linvel = np.array([[1.0, 2.0, 0.0]])  # nonzero
+    # 2026-07-14: modest error, not [1.0, 2.0] -- command_tracking_term is
+    # now an exp(-error/std**2) kernel (std=0.5); a [1,2] m/s error is
+    # >>std and decays to ~2e-9, numerically indistinguishable from zero
+    # under np.isclose's default tolerance even though it's not exactly
+    # zero. A small error keeps the term comfortably nonzero.
+    base_linvel = np.array([[0.1, 0.2, 0.0]])  # nonzero
     velocity_command = np.zeros((n, 3))  # zero command -> nonzero tracking error
     action = np.array([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1]])
     previous_action = np.array([[0.0, 0.0, 0.0, 0.0, 0.0, 0.0]])

@@ -39,6 +39,8 @@ below that touches sensor data has an inline `# UNVERIFIED:` comment.
 
 from __future__ import annotations
 
+import math
+
 import torch
 
 from mjlab.actuator.xml_actuator import XmlActuatorCfg
@@ -62,6 +64,7 @@ from mjlab.scene import SceneCfg
 from mjlab.sim import MujocoCfg, SimulationCfg
 from mjlab.terrains import TerrainEntityCfg
 from mjlab.tasks.registry import register_mjlab_task
+from mjlab.tasks.velocity.mdp import UniformVelocityCommandCfg
 
 # Re-use the already-frozen, already-tested pure-Python specs as the
 # single source of truth for names/values -- this file only translates
@@ -77,6 +80,7 @@ from mjlab_biped.recovery import (
     FALLEN_JOINT_POSITION_RANGE,
     RECOVERY_RESET_PROB,
 )
+from mjlab_biped.commands import WALK_STAGE_1_RANGE
 
 _biped = BipedEntityCfg()
 _reward_cfg = RewardCfg()
@@ -210,18 +214,16 @@ def previous_action(env, asset_cfg: SceneEntityCfg = None) -> torch.Tensor:
 
 
 def velocity_command(env, asset_cfg: SceneEntityCfg = None) -> torch.Tensor:
-    # 2026-07-11: make_biped_env_cfg() below does not (yet) pass a
-    # `commands=` dict to ManagerBasedRlEnvCfg, so env.command_manager is
-    # mjlab's NullCommandManager, whose get_command() always returns
-    # None -- confirmed live (a real env construction prints
-    # "<NullCommandManager> (inactive)"). Wiring a real mjlab
-    # CommandTermCfg (resampling mjlab_biped.commands.sample_command's
-    # logic each episode) is deferred to when Phase 7's curriculum
-    # widens CommandRangeCfg past all-zero; until then this returns a
-    # literal zero vector, which is exactly correct for the current
-    # balance-first gate (CommandRangeCfg()'s frozen default is
-    # vx/vy/yaw_rate all (0.0, 0.0)).
+    # Phase 7.W.1 (2026-07-14): Mjlab-Biped-Walk-v0 passes a real
+    # `commands={"twist": WALK_COMMAND_CFG}` dict (see make_biped_env_cfg),
+    # so env.command_manager is a real CommandManager with "twist" active
+    # for that task. Mjlab-Biped-Balance-v0/-Recovery-v0 still pass no
+    # `commands=` at all (env.command_manager stays mjlab's inert
+    # NullCommandManager, `active_terms` empty) -- unchanged behavior for
+    # those two tasks, this function still returns a literal zero for them.
     del asset_cfg
+    if "twist" in env.command_manager.active_terms:
+        return env.command_manager.get_command("twist")
     return torch.zeros(env.num_envs, 3, device=env.device)
 
 
@@ -246,13 +248,23 @@ def upright_fn(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
     return 1.0 - 2.0 * (qx**2 + qy**2)
 
 
+COMMAND_TRACKING_STD = math.sqrt(0.25)  # matches mjlab's real G1/Go1 track_linear_velocity std
+
+
 def command_tracking_fn(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
-    # See velocity_command()'s comment: command is a literal zero until
-    # a real CommandTermCfg is wired in for Phase 7's curriculum.
+    # Phase 7.W.1 (2026-07-14): switched from a raw linear negative-norm
+    # penalty to mjlab's real reference exponential-kernel form
+    # (mjlab.tasks.velocity.mdp.rewards.track_linear_velocity, fetched
+    # from source) -- bounded in [0, 1], well-behaved gradients. Reads
+    # the real sampled command via velocity_command() (returns zero for
+    # Mjlab-Biped-Balance-v0/-Recovery-v0, so this term is a harmless
+    # no-op there regardless of weight; those tasks keep
+    # command_tracking_weight=0.0 anyway).
     entity = env.scene[asset_cfg.name]
     lin_vel = entity.data.root_link_lin_vel_w[:, :2]
-    cmd = torch.zeros_like(lin_vel)
-    return -torch.norm(lin_vel - cmd, dim=-1)
+    cmd = velocity_command(env)[:, :2]
+    error = torch.sum((cmd - lin_vel) ** 2, dim=-1)
+    return torch.exp(-error / COMMAND_TRACKING_STD**2)
 
 
 def control_effort_fn(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
@@ -457,6 +469,39 @@ TERMINATION_TERMS_RECOVERY = {
 }
 
 # ---------------------------------------------------------------------------
+# Phase 7.W.1 (2026-07-14): walking curriculum -- OPT-IN, gated behind
+# `make_biped_env_cfg(walk_enabled=True)`, entirely independent of
+# recovery_enabled. Default training (walk_enabled=False) is unchanged.
+# Reuses mjlab's real UniformVelocityCommandCfg (mjlab.tasks.velocity.mdp)
+# directly rather than a custom wrapper -- it's a generic, already-tested
+# CommandTerm (mjlab.managers.command_manager), not velocity-task-specific
+# logic. Range values come from mjlab_biped/commands.py's
+# WALK_STAGE_1_RANGE (single source of truth, narrow forward-only for
+# this first curriculum stage, per the user's explicit staging decision
+# 2026-07-14) -- widen by defining a new named preset there, not by
+# editing numbers here.
+# ---------------------------------------------------------------------------
+
+WALK_COMMAND_TRACKING_WEIGHT = 2.0  # matches mjlab's real G1/Go1 track_linear_velocity weight
+
+WALK_COMMAND_CFG = UniformVelocityCommandCfg(
+    entity_name=ROBOT_ENTITY_NAME,
+    resampling_time_range=(3.0, 8.0),
+    ranges=UniformVelocityCommandCfg.Ranges(
+        lin_vel_x=WALK_STAGE_1_RANGE.vx_range,
+        lin_vel_y=WALK_STAGE_1_RANGE.vy_range,
+        ang_vel_z=WALK_STAGE_1_RANGE.yaw_rate_range,
+    ),
+)
+
+REWARD_TERMS_WALK = dict(
+    REWARD_TERMS,
+    command_tracking=RewardTermCfg(
+        func=command_tracking_fn, weight=WALK_COMMAND_TRACKING_WEIGHT, params={"asset_cfg": _robot_scene_cfg}
+    ),
+)
+
+# ---------------------------------------------------------------------------
 # Actions: 6 position-target actuators, matching entity.py's ActuatorConfig.
 # use_default_offset=False since our targets are absolute joint angles
 # (radians), not deltas from the stand-keyframe default pose.
@@ -512,7 +557,9 @@ SIM_CFG = SimulationCfg(
 
 
 def make_biped_env_cfg(
-    num_envs: int = _env_cfg.scene.num_envs, recovery_enabled: bool = False
+    num_envs: int = _env_cfg.scene.num_envs,
+    recovery_enabled: bool = False,
+    walk_enabled: bool = False,
 ) -> ManagerBasedRlEnvCfg:
     """Build the training env cfg. `num_envs` overridable at train time
     via `--env.scene.num-envs N` (tyro CLI, see docs/colab_upload_manifest.md).
@@ -523,7 +570,16 @@ def make_biped_env_cfg(
     violates both by construction -- see reset_biped_recovery_mix's
     docstring for why they're omitted, not just relaxed). With the
     default False, this function's output is unchanged from before this
-    sub-phase -- verified in tests/test_mjlab_task_static.py."""
+    sub-phase -- verified in tests/test_mjlab_task_static.py.
+
+    `walk_enabled` (Phase 7.W.1, default False, independent of
+    recovery_enabled): passes a real `commands={"twist": WALK_COMMAND_CFG}`
+    dict (mjlab's real UniformVelocityCommandCfg) and swaps in
+    REWARD_TERMS_WALK (adds a nonzero command_tracking weight). Events/
+    terminations are unaffected -- walking still uses the same
+    fall_tilt/fall_height/time_out terminations and default reset as the
+    balance task; only the command source and reward set change. With
+    both flags False (the default), output is unchanged."""
     scene_cfg = SceneCfg(
         terrain=TerrainEntityCfg(terrain_type="plane"),
         entities={ROBOT_ENTITY_NAME: BIPED_ENTITY_CFG},
@@ -549,13 +605,16 @@ def make_biped_env_cfg(
         # policy could ever learn anything. DR/init-noise (Phase 6.C)
         # is still deferred -- this only restores the required default.
         events = {"reset_scene_to_default": EventTermCfg(func=reset_scene_to_default, mode="reset")}
-        rewards = REWARD_TERMS
         terminations = TERMINATION_TERMS
+        rewards = REWARD_TERMS_WALK if walk_enabled else REWARD_TERMS
+
+    commands = {"twist": WALK_COMMAND_CFG} if walk_enabled else {}
 
     return ManagerBasedRlEnvCfg(
         scene=scene_cfg,
         observations={"actor": ACTOR_OBS_GROUP, "critic": CRITIC_OBS_GROUP},
         actions={"joint_pos": ACTION_CFG},
+        commands=commands,
         events=events,
         rewards=rewards,
         terminations=terminations,
@@ -565,8 +624,8 @@ def make_biped_env_cfg(
     )
 
 
-def make_play_env_cfg(recovery_enabled: bool = False) -> ManagerBasedRlEnvCfg:
-    return make_biped_env_cfg(num_envs=4, recovery_enabled=recovery_enabled)
+def make_play_env_cfg(recovery_enabled: bool = False, walk_enabled: bool = False) -> ManagerBasedRlEnvCfg:
+    return make_biped_env_cfg(num_envs=4, recovery_enabled=recovery_enabled, walk_enabled=walk_enabled)
 
 
 # ---------------------------------------------------------------------------
@@ -654,5 +713,23 @@ register_mjlab_task(
     RECOVERY_TASK_ID,
     env_cfg=make_biped_env_cfg(recovery_enabled=True),
     play_env_cfg=make_play_env_cfg(recovery_enabled=True),
+    rl_cfg=MJLAB_RL_CFG,
+)
+
+# Third task id, 2026-07-14 (Phase 7.W.1): forward-walking curriculum,
+# independent of both the above. Command-conditioned via a real mjlab
+# UniformVelocityCommandCfg (WALK_COMMAND_CFG above), narrow forward-only
+# range for this first curriculum stage (WALK_STAGE_1_RANGE in
+# mjlab_biped/commands.py). Only start training against this once a
+# stable Mjlab-Biped-Balance-v0 checkpoint exists -- walking is trained
+# as a curriculum stage on top of an already-working stand/balance
+# policy, not from scratch (see CLAUDE.md's Phase 7.W.1 note and the
+# fall-recovery literature it cites for why staged curricula matter here).
+WALK_TASK_ID = "Mjlab-Biped-Walk-v0"
+
+register_mjlab_task(
+    WALK_TASK_ID,
+    env_cfg=make_biped_env_cfg(walk_enabled=True),
+    play_env_cfg=make_play_env_cfg(walk_enabled=True),
     rl_cfg=MJLAB_RL_CFG,
 )
