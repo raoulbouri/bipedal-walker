@@ -53,6 +53,7 @@ BUNDLE_FILES = [
     "mjlab_biped/config.py",
     "mjlab_biped/rl_cfg.py",
     "mjlab_biped/mjlab_task.py",
+    "mjlab_biped/recovery.py",
     "mjlab_biped/local_env.py",
     "mjlab_biped/README.md",
     "docs/mjlab_adapter_notes.md",
