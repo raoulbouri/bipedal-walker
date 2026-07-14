@@ -134,9 +134,11 @@ BIPED_ENTITY_CFG = EntityCfg(
 # EntityData use a `_link_` infix mjlab's own Isaac-Lab-style naming
 # convention doesn't drop: `root_link_pos_w`, `root_link_quat_w`,
 # `root_link_lin_vel_w` (not `root_pos_w`/`root_quat_w`/`root_lin_vel_w`
-# as originally guessed). Whole-robot CoM is `root_com_pos_w` (backed by
-# MuJoCo's `subtree_com` at the root body -- the root's kinematic subtree
-# is the entire robot, since it's the floating base).
+# as originally guessed). Whole-robot CoM position is read from
+# `data.xipos[:, root_body_id]` directly, NOT `entity.data.root_com_pos_w`
+# -- see the `com()` function below for why (a real mjlab bug found
+# 2026-07-14 that only manifests at large num_envs / on the real GPU
+# backend, not in small-scale local CPU testing).
 # ---------------------------------------------------------------------------
 
 
@@ -184,8 +186,21 @@ def base_height(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
 
 
 def com(env, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+    # NOT entity.data.root_com_pos_w -- found 2026-07-14 via a live Colab
+    # GPU crash at num_envs=2048 (worked fine locally at num_envs<=4 on
+    # CPU, so this only surfaces at scale/on the real GPU backend): that
+    # property's underlying root_com_pose_w computes an orientation via
+    # quat_mul(data.xquat[:, root_body_id], model.body_iquat[:, root_body_id])
+    # even though we only want position. model.body_iquat is not
+    # guaranteed to be replicated to shape (nworld, nbody, 4) the same way
+    # data.xquat is (it stayed (1, nbody, 4) in the failing run) --
+    # quat_mul has no broadcasting, so quat_mul((2048,4), (1,4)) raises
+    # ValueError. Sidestep it entirely: xipos is the same underlying
+    # MuJoCo field root_com_pose_w itself uses for position, verified
+    # bit-identical to entity.data.root_com_pos_w on a working (small
+    # num_envs) run before this fix landed.
     entity = env.scene[asset_cfg.name]
-    return entity.data.root_com_pos_w
+    return entity.data.data.xipos[:, entity.data.indexing.root_body_id]
 
 
 def previous_action(env, asset_cfg: SceneEntityCfg = None) -> torch.Tensor:

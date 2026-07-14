@@ -268,3 +268,29 @@ def test_notebook_has_smoke_test_before_training_cell():
         f"Expected the smoke-test cell (index {smoke_idx}) to appear "
         f"before the training cell (index {train_idx}), but it does not."
     )
+
+
+def test_com_does_not_use_buggy_root_com_pos_w():
+    """Regression test for a real mjlab bug found 2026-07-14: at large
+    num_envs (2048, on the real Colab GPU backend), entity.data.root_com_pos_w
+    raises `torch.jit.Error: quaternion shape mismatch [2048, 4] != [1, 4]`
+    inside mjlab's own root_com_pose_w property (model.body_iquat isn't
+    reliably replicated to (nworld, nbody, 4) the way data.xquat is, and
+    quat_mul doesn't broadcast). Not reproducible at small num_envs on
+    local CPU testing -- only surfaced live on Colab. Fixed by reading
+    data.xipos[:, root_body_id] directly in com(), which needs no
+    orientation math at all. This test fails loudly if root_com_pos_w (or
+    the other root_com_* properties, which share the same buggy
+    quat_mul(body_iquat) path) is ever reintroduced anywhere in the file."""
+    tree = ast.parse(_mjlab_task_source())
+    banned_attrs = {"root_com_pos_w", "root_com_quat_w", "root_com_pose_w"}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and node.attr in banned_attrs:
+            raise AssertionError(
+                f"mjlab_task.py has a live '.{node.attr}' attribute access "
+                f"at line {node.lineno} -- this mjlab property crashes at "
+                "large num_envs on the real GPU backend (quat_mul(body_iquat) "
+                "shape mismatch, see com()'s comment for the full 2026-07-14 "
+                "root-cause writeup). Use entity.data.data.xipos[:, "
+                "entity.data.indexing.root_body_id] instead."
+            )

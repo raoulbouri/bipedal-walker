@@ -39,6 +39,7 @@ bundle-root/
 │   ├── config.py
 │   ├── rl_cfg.py
 │   ├── mjlab_task.py      (Phase 7.C — imports real mjlab, Colab-only)
+│   ├── recovery.py        (Phase 7.R.3 — fallen-pose reset + recovery reward)
 │   ├── local_env.py       (present but inert on Colab, see note below)
 │   └── README.md
 ├── docs/
